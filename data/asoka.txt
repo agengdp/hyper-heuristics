@@ -1,16 +1,16 @@
-Maria Dwi Isnaini;Kepala unit
-Kholisah;senior
-Andriyan Eka L;senior
-Sholikhah;senior
-Dian Mustiko R;senior
-Izzudin Alqosam;senior
-Diah Ayu R;anggota
-Novia Widyawati;anggota
-Anggi Aristy;anggota
-Ratna Yunita;anggota
-Nina Ulfiah;anggota
-Nur Aidha Aprilia M;anggota
-Fera Puji Ratnawati;anggota
-Ike Widayanti;anggota
-Zainul Ashar;anggota
-Agung Wijaya;anggota
+Maria Dwi Isnaini;karu;general
+Kholisah;senior;general
+Andriyan Eka L;senior;general
+Sholikhah;senior;general
+Dian Mustiko R;senior;general
+Izzudin Alqosam;senior;general
+Diah Ayu R;anggota;general
+Novia Widyawati;anggota;general
+Anggi Aristy;anggota;general
+Ratna Yunita;anggota;general
+Nina Ulfiah;anggota;general
+Nur Aidha Aprilia M;anggota;general
+Fera Puji Ratnawati;anggota;general
+Ike Widayanti;anggota;general
+Zainul Ashar;anggota;general
+Agung Wijaya;anggota;general

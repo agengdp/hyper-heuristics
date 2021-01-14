@@ -1,8 +1,10 @@
 # Hard Constraint
-- shift ada 3 dalam sehari (Pagi, Siang, Malam)
+v- shift ada 3 dalam sehari (Pagi, Siang, Malam)
 - harus ada 1 Senior tiap shift
-- karu Pagi terus
-- 1 bulan 4x libur
+v- karu Pagi terus
+v- 1 bulan 4x libur
+v- 6 hari masuk 1x libur
+v- shift tidak boleh urut dari Malam ke Pagi
 
 
 # JFI - Jain Fairness Index 
