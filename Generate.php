@@ -116,7 +116,7 @@ class Generate{
     public function initalize(){
 
         $this->cells = $this->solve($this->cells);
-        return $this;
+        return $this->cells;
 
     }
 
@@ -192,9 +192,12 @@ class Generate{
     private function selectAnswer($cells, $column, $row){
 
         $shift = ['P', 'M', 'S', 'L'];
+        $answer = $shift;
+
+        $date = $column+1;
 
         // Cek apakah ini hari minggu
-        $isSunday = date('w', strtotime($this->month . '/. $column./' . $this->year)) == 0 ? true : false;
+        $isSunday = date('w', strtotime($this->month . '/' . $date . '/' . $this->year)) == 0 ? true : false;
 
         // constraint Karu
         if($cells[$column][$row]['employee']['jabatan'] === 'karu'){
@@ -218,8 +221,15 @@ class Generate{
 
         // 6X masuk 1x libur
         // Jika 6 hari sebelumnya libur, maka hari ini libur
-        if($cells[$column - 6][$row]['schedule'] === 'L'){
+        if($cells[$column - 7][$row]['schedule'] === 'L'){
             return $shift[3];
+        }
+
+        // Gaboleh libur gandeng dalam jangka waktu 6 hari
+        for($i=0; $i < 6; $i++){
+            if($cells[$column - $i][$row]['schedule'] === 'L'){
+                unset($shift[3]);
+            }
         }
 
         // Senior Constraint
@@ -235,27 +245,38 @@ class Generate{
 
             $jadwalSenior = array_column($seniors, 'schedule');
 
-            // $shift = array_diff($shift, array_unique($jadwalSenior));
+            $diff = array_diff($shift, array_unique($jadwalSenior));
+
+            if(!empty($diff)){
+                $answer = $diff;
+            }
 
         }
 
+        // Anggota Constraint
+        if($cells[$column][$row]['employee']['jabatan'] === 'anggota'){
 
-        var_dump($jadwalSenior);
-        echo "----------";
+            // Tiap shift harus ada yg masuk
+            
+            // Filter anggota only
+            $anggotas = array_filter($cells[$column], function($arr){
+                return $arr['employee']['jabatan'] == 'anggota';
+            });
 
-        // var_dump($shift);
 
-        if(empty($shift)){
-            die();
+            $jadwalAnggota = array_column($anggotas, 'schedule');
+
+            $diff = array_diff($shift, array_unique($jadwalAnggota));
+
+            if(!empty($diff)){
+                $answer = $diff;
+            }
+
         }
 
-        return $shift[array_rand($shift)];
+        return $shift[array_rand($answer)];
 
     }
 
 
 }
-
-$init = new Generate(2020, 11, 'data/asoka.txt');
-$init->initalize();
-
