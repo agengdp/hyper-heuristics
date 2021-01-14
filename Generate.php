@@ -226,7 +226,7 @@ class Generate{
         }
 
         // Gaboleh libur gandeng dalam jangka waktu 6 hari
-        for($i=0; $i < 6; $i++){
+        for($i=0; $i < 7; $i++){
             if($cells[$column - $i][$row]['schedule'] === 'L'){
                 unset($shift[3]);
             }
