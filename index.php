@@ -1,7 +1,7 @@
 <?php
 
 include 'Generate.php';
-$schedule = new Generate(2020, 11, 'data/asoka.txt');
+$schedule = new Generate(2008, 02, 'data/asoka.txt');
 $schedules = $schedule->initalize();
 
 ?>
@@ -16,7 +16,7 @@ $schedules = $schedule->initalize();
 </style>
 
 JFI: <?= $schedules['jfi'] ?>
-<table>
+<table width="100%">
     <thead>
         <tr>
             <th>

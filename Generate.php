@@ -24,13 +24,6 @@ class Generate{
     private $employees;
 
     /**
-     * Shift
-     *
-     * @var integer
-     */
-    private $shift = 3;
-
-    /**
      * Block 
      *
      * @var array
@@ -118,7 +111,6 @@ class Generate{
 
         $this->cells = $this->solve($this->cells);
         $this->mapByEmployee();
-        $this->countJFI();
 
         return $this->cells;
 
@@ -281,7 +273,6 @@ class Generate{
                 return $arr['employee']['jabatan'] == 'anggota';
             });
 
-
             $jadwalAnggota = array_column($anggotas, 'schedule');
 
             $diff = array_diff($shift, array_unique($jadwalAnggota));
@@ -336,7 +327,10 @@ class Generate{
 
             }
         }
-        $this->cells = $cells;
+        $this->cells = [
+            'data'  => $cells,
+            'jfi'   => 0
+        ];
 
     }
 
@@ -369,8 +363,54 @@ class Generate{
 
         $this->cells = [
             'jfi'       => $jfi,
-            'data' => $cells
+            'data'      => $cells
         ];
+    }
+
+    /**
+     * Hitung jumlah minggu
+     *
+     * @return void
+     */
+    private function countSunday(){
+
+        $totaldays = date('t',strtotime($this->year.'-'.$this->month.'-01'));
+        $countday = 4;
+        if(($totaldays - $day) >= 28 ){
+            $countday = 5;      
+        }
+        return $countday;
+    
+    }
+
+    /**
+     * Move
+     *
+     * @return void
+     */
+    private function move(){
+        $jmlLiburSeharusnya = $this->countSunday();
+        $selisih    = 0;
+        $jmlLibur   = 0;
+
+        foreach($this->cells['data'] as $x => $employee){
+            $posisiM = []; // ($x, $y)
+
+
+        }
+
+    }
+
+    private function swap(){
+
+    }
+
+    private function reinforcementLearning(){
+
+    }
+
+    private function hillClimbing(){
+
     }
 
 
