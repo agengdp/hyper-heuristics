@@ -39,7 +39,9 @@ class Generate{
      * @param array $employeeFile
      */
     public function __construct(
-        $year, $month, $employeeFile
+        $year, 
+        $month, 
+        $employeeFile
     ){
 
         $this->year         = $year;
@@ -111,6 +113,7 @@ class Generate{
 
         $this->cells = $this->solve($this->cells);
         $this->mapByEmployee();
+        $this->countJFI();
 
         return $this->cells;
 
@@ -230,11 +233,34 @@ class Generate{
         }
 
         // Gaboleh libur gandeng dalam jangka waktu 6 hari
-        for($i=0; $i < 7; $i++){
+        for($i = 0; $i < 7; $i++){
             if(isset($cells[$column - $i][$row]['schedule']) && $cells[$column - $i][$row]['schedule'] === 'L'){
                 unset($shift[3]);
             }
         }
+
+        // Pattern tidak boleh 3x
+        $prev1      = '';
+        $prev2      = '';
+        $prevValue  = '';
+        if(isset($cells[$column - 1][$row]['schedule'])){
+            $prev1 = $cells[$column - 1][$row]['schedule'];
+        }
+
+        if(isset($cells[$column - 2][$row]['schedule'])){
+            $prev2 = $cells[$column - 2][$row]['schedule'];
+        }
+
+        if(!empty($prev1) && !empty($prev2) && $prev1 == $prev2){
+            $prevValue = $prev1;
+        }
+
+        if(!empty($prevValue)){
+            $findValueIndex = array_search($prevValue, $shift);
+            unset($shift[$findValueIndex]);
+        }
+
+
 
         // Reset index shift after unset
         $shift = array_values($shift);
@@ -246,28 +272,23 @@ class Generate{
         if($cells[$column][$row]['employee']['jabatan'] === 'senior'){
 
             // Tiap shift harus ada yg masuk
-            
             // Filter senior only
             $seniors = array_filter($cells[$column], function($arr){
                 return $arr['employee']['jabatan'] == 'senior';
             });
 
-
             $jadwalSenior = array_column($seniors, 'schedule');
-
             $diff = array_diff($shift, array_unique($jadwalSenior));
 
             if(!empty($diff)){
                 $answer = $diff;
             }
-
         }
 
         // Anggota Constraint
         if($cells[$column][$row]['employee']['jabatan'] === 'anggota'){
 
             // Tiap shift harus ada yg masuk
-            
             // Filter anggota only
             $anggotas = array_filter($cells[$column], function($arr){
                 return $arr['employee']['jabatan'] == 'anggota';
@@ -280,7 +301,6 @@ class Generate{
             if(!empty($diff)){
                 $answer = $diff;
             }
-
         }
 
         $result = $shift[array_rand($answer)];
@@ -296,7 +316,6 @@ class Generate{
                 $bobot = 1;
             }
         }
-        
 
         return [
             'schedule'      => $result,
@@ -311,27 +330,25 @@ class Generate{
      * @return void
      */
     private function mapByEmployee(){
-        $cells = [];
-        $schedule = [];
+        $cells      = [];
+        $schedule   = [];
+
         foreach($this->cells as $y => $columns){
             foreach($columns as $x => $row){
                 $cells[$x]              = $row['employee'];
-
                 foreach($this->cells as $k => $r){
-
                     $cells[$x]['schedules'][] = [
                         'schedule'      => $r[$x]['schedule'],
                         'bobot'         => $r[$x]['bobot']
                     ];
                 }
-
             }
         }
+
         $this->cells = [
             'data'  => $cells,
             'jfi'   => 0
         ];
-
     }
 
     /**
@@ -345,10 +362,10 @@ class Generate{
         $jmlEmpKuadrat = 0;
         $jmlSumEmp = 0;
 
-        foreach($this->cells as $x => $rows){
+        foreach($this->cells['data'] as $x => $row){
 
-            $totalBobot = array_sum(array_column($rows['schedules'], 'bobot'));
-            $cells[$x]  = $rows;
+            $totalBobot = array_sum(array_column($row['schedules'], 'bobot'));
+            $cells[$x]  = $row;
             $cells[$x]['bobot'] = $totalBobot;
 
             $empKuadrat = pow($totalBobot, 2);
@@ -361,7 +378,7 @@ class Generate{
         $jmlSumEmpKuadrat = pow($jmlSumEmp, 2);
         $jfi = $jmlSumEmpKuadrat / (count($this->employees) * $jmlEmpKuadrat);
 
-        $this->cells = [
+        return $this->cells = [
             'jfi'       => $jfi,
             'data'      => $cells
         ];

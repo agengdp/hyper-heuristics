@@ -41,7 +41,7 @@ JFI: <?= $schedules['jfi'] ?>
                 <?php foreach($schedule['schedules'] as $k => $value): ?>
                     <td style="text-align: center"><?= $value['schedule']; ?></td>
                 <?php endforeach; ?>
-                <td style="text-align:center"><?= $schedule['bobot'] ?></tr>
+                <td style="text-align:center"></tr>
             </tr>
         <?php endforeach; ?>
     </tbody>
