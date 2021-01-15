@@ -14,31 +14,34 @@ $schedules = $schedule->initalize();
       border-collapse: collapse;
     }
 </style>
+
+JFI: <?= $schedules['jfi'] ?>
 <table>
     <thead>
         <tr>
             <th>
                 X
             </th>
-            <?php foreach($schedules as $key => $schedule): ?>
-                <th ><?=$key+1?></th>
+
+            <?php $day = 0; foreach($schedules['data'][0]['schedules'] as $schedule): $day++ ?>
+                <th><?=$day?></th>
             <?php endforeach; ?>
+            <th>bobot</th>
         </tr>
     </thead>
     <tbody>
-        <?php foreach($schedules[0] as $key => $schedule): ?>
+        
+        <?php foreach($schedules['data'] as $key => $schedule): ?>            
             <tr>
-                <?php foreach($schedules as $k => $value): ?>
-
-                    <?php if($k == 0) : ?>
-                        <td>
-                            <?= $schedules[$k][$key]['employee']['nama']; ?><br>
-                            <?= $schedules[$k][$key]['employee']['jabatan']; ?><br>
-                            <?= $schedules[$k][$key]['employee']['spesialisasi']; ?><br>
-                        </td>
-                    <?php endif; ?>
-                    <td style="text-align: center"><?= $value[$key]['schedule']; ?></td>
+                <td>
+                    <?= $schedule['nama']; ?><br>
+                    <?= $schedule['jabatan']; ?><br>
+                    <?= $schedule['spesialisasi']; ?><br>
+                </td>
+                <?php foreach($schedule['schedules'] as $k => $value): ?>
+                    <td style="text-align: center"><?= $value['schedule']; ?></td>
                 <?php endforeach; ?>
+                <td style="text-align:center"><?= $schedule['bobot'] ?></tr>
             </tr>
         <?php endforeach; ?>
     </tbody>

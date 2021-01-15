@@ -99,7 +99,8 @@ class Generate{
             for($y = 0; $y < count($this->employees); $y++){
                 $cells[$x][$y] = [
                     'employee'      => $this->employees[$y],
-                    'schedule'      => null
+                    'schedule'      => null,
+                    'bobot'           => 0
                 ];
             }
         }
@@ -116,6 +117,9 @@ class Generate{
     public function initalize(){
 
         $this->cells = $this->solve($this->cells);
+        $this->mapByEmployee();
+        $this->countJFI();
+
         return $this->cells;
 
     }
@@ -173,7 +177,8 @@ class Generate{
                 $answer = $this->selectAnswer($cells, $column, $row);
 
                 if($answer !== false){
-                    $cells[$column][$row]['schedule'] = $answer;
+                    $cells[$column][$row]['schedule']   = $answer['schedule'];
+                    $cells[$column][$row]['bobot']      = $answer['bobot'];
                 }
             }
 
@@ -192,7 +197,6 @@ class Generate{
     private function selectAnswer($cells, $column, $row){
 
         $shift = ['P', 'M', 'S', 'L'];
-        $answer = $shift;
 
         $date = $column+1;
 
@@ -203,34 +207,48 @@ class Generate{
         if($cells[$column][$row]['employee']['jabatan'] === 'karu'){
 
             if($isSunday){
-                return $shift[3];
+                return [
+                    'schedule'      => $shift[3],
+                    'bobot'         => 0 // khusus karu bobot dibikin 0 semua
+                ];
             }
 
-            return $shift[0];
+            return [
+                'schedule'      => $shift[0],
+                'bobot'         => 0 // khusus karu bobot dibikin 0 semua
+            ];
         }
 
 
         // Global constraint
 
         // Unset Shift Pagi, biar gabisa abis masuk malam terus masuk pagi
-        $previousShift = $cells[$column - 1][$row]['schedule'];
-        if(isset($previousShift) && $previousShift !== 'S'){
+        if(isset($cells[$column - 1][$row]['schedule']) && $cells[$column - 1][$row]['schedule'] !== 'S'){
             unset($shift[0]);
         }
 
 
         // 6X masuk 1x libur
         // Jika 6 hari sebelumnya libur, maka hari ini libur
-        if($cells[$column - 7][$row]['schedule'] === 'L'){
-            return $shift[3];
+        if(isset($cells[$column - 7][$row]['schedule']) && $cells[$column - 7][$row]['schedule'] === 'L'){
+            return [
+                'schedule'      => $shift[3],
+                'bobot'         => 4
+            ];
         }
 
         // Gaboleh libur gandeng dalam jangka waktu 6 hari
         for($i=0; $i < 7; $i++){
-            if($cells[$column - $i][$row]['schedule'] === 'L'){
+            if(isset($cells[$column - $i][$row]['schedule']) && $cells[$column - $i][$row]['schedule'] === 'L'){
                 unset($shift[3]);
             }
         }
+
+        // Reset index shift after unset
+        $shift = array_values($shift);
+
+        // Mirroring shift
+        $answer = $shift;
 
         // Senior Constraint
         if($cells[$column][$row]['employee']['jabatan'] === 'senior'){
@@ -274,8 +292,85 @@ class Generate{
 
         }
 
-        return $shift[array_rand($answer)];
+        $result = $shift[array_rand($answer)];
 
+        $bobot = 0;
+        if($result == 'L'){
+            $day = date('w', strtotime($this->month . '/' . $date . '/' . $this->year));
+            if($day === 0){
+                $bobot = 4;
+            }elseif($day === 6){
+                $bobot = 2;
+            }else{
+                $bobot = 1;
+            }
+        }
+        
+
+        return [
+            'schedule'      => $result,
+            'bobot'         => $bobot
+        ];
+
+    }
+
+    /**
+     * Map cells by Employee
+     *
+     * @return void
+     */
+    private function mapByEmployee(){
+        $cells = [];
+        $schedule = [];
+        foreach($this->cells as $y => $columns){
+            foreach($columns as $x => $row){
+                $cells[$x]              = $row['employee'];
+
+                foreach($this->cells as $k => $r){
+
+                    $cells[$x]['schedules'][] = [
+                        'schedule'      => $r[$x]['schedule'],
+                        'bobot'         => $r[$x]['bobot']
+                    ];
+                }
+
+            }
+        }
+        $this->cells = $cells;
+
+    }
+
+    /**
+     * Hitung JFI
+     *
+     * @return void
+     */
+    private function countJFI(){
+
+        $cells = [];
+        $jmlEmpKuadrat = 0;
+        $jmlSumEmp = 0;
+
+        foreach($this->cells as $x => $rows){
+
+            $totalBobot = array_sum(array_column($rows['schedules'], 'bobot'));
+            $cells[$x]  = $rows;
+            $cells[$x]['bobot'] = $totalBobot;
+
+            $empKuadrat = pow($totalBobot, 2);
+            $jmlEmpKuadrat += $empKuadrat;
+            $jmlSumEmp += $totalBobot;
+
+            $cells[$x]['jfi'] = $totalBobot;
+        }
+
+        $jmlSumEmpKuadrat = pow($jmlSumEmp, 2);
+        $jfi = $jmlSumEmpKuadrat / (count($this->employees) * $jmlEmpKuadrat);
+
+        $this->cells = [
+            'jfi'       => $jfi,
+            'data' => $cells
+        ];
     }
 
 
