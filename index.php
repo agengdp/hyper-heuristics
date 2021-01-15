@@ -45,9 +45,9 @@ JFI: <?= $schedules['jfi'] ?>
                         if($value['schedule'] == 'P'){
                             $bg = '#FF0';
                         }elseif($value['schedule'] == 'L'){
-                            $bg = '#0F0';
-                        }elseif($value['schedule'] == 'S'){
                             $bg = '#F00';
+                        }elseif($value['schedule'] == 'S'){
+                            $bg = '#0F0';
                         }
                     ?>
                     
