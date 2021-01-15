@@ -39,7 +39,19 @@ JFI: <?= $schedules['jfi'] ?>
                     <?= $schedule['spesialisasi']; ?><br>
                 </td>
                 <?php foreach($schedule['schedules'] as $k => $value): ?>
-                    <td style="text-align: center"><?= $value['schedule']; ?></td>
+
+                    <?php 
+                        $bg = '#0FF';
+                        if($value['schedule'] == 'P'){
+                            $bg = '#FF0';
+                        }elseif($value['schedule'] == 'L'){
+                            $bg = '#0F0';
+                        }elseif($value['schedule'] == 'S'){
+                            $bg = '#F00';
+                        }
+                    ?>
+                    
+                    <td style="text-align: center;background:<?= $bg ?>"><?= $value['schedule']; ?></td>
                 <?php endforeach; ?>
                 <td style="text-align:center"></tr>
             </tr>
