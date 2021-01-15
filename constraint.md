@@ -5,7 +5,7 @@ v- karu Pagi terus minggu libur
 v- 1 bulan 4x libur
 v- 6 hari masuk 1x libur
 v- shift tidak boleh urut dari Malam ke Pagi
-- pattern tidak boleh gandeng 3 ex: MMM
+v- pattern tidak boleh gandeng 3 ex: MMM
 - pattern MML
 - anggota bagi rata 3 shift; max 30% dari jumlah. 
 

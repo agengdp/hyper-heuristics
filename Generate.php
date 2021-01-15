@@ -113,6 +113,7 @@ class Generate{
 
         $this->cells = $this->solve($this->cells);
         $this->mapByEmployee();
+        // $this->swap();
         $this->countJFI();
 
         return $this->cells;
@@ -260,8 +261,6 @@ class Generate{
             unset($shift[$findValueIndex]);
         }
 
-
-
         // Reset index shift after unset
         $shift = array_values($shift);
 
@@ -345,10 +344,7 @@ class Generate{
             }
         }
 
-        $this->cells = [
-            'data'  => $cells,
-            'jfi'   => 0
-        ];
+        $this->cells['data'] = $cells;
     }
 
     /**
@@ -378,10 +374,7 @@ class Generate{
         $jmlSumEmpKuadrat = pow($jmlSumEmp, 2);
         $jfi = $jmlSumEmpKuadrat / (count($this->employees) * $jmlEmpKuadrat);
 
-        return $this->cells = [
-            'jfi'       => $jfi,
-            'data'      => $cells
-        ];
+        return $this->cells['jfi'] = $jfi;
     }
 
     /**
@@ -410,7 +403,7 @@ class Generate{
         $selisih    = 0;
         $jmlLibur   = 0;
 
-        foreach($this->cells['data'] as $x => $employee){
+        foreach($this->cells['data'] as $x => $employees){
             $posisiM = []; // ($x, $y)
 
 
@@ -418,12 +411,38 @@ class Generate{
 
     }
 
+    /**
+     * Swap
+     * @return void
+     */
     private function swap(){
+        $positions = []; // [$x, $y]
 
+        foreach($this->cells['data'] as $x => $employees){
+            foreach ($employees['schedules'] as $y => $value) {
+                if($value['schedule'] === 'L'){
+                    $positions[] = [$x, $y];
+                }
+            }
+        }
+
+        foreach($positions as $position){
+
+            // Generate random number of employee
+            // with exclude current position as result
+            $n = 0;
+            while( in_array( ($n = random_int(0, count($this->cells['data']))), array($position[0])));
+
+            // Swap jadwal staf pertama dan kedua
+            $prevValue = $this->cells['data'][$n]['schedules'][$position[1]]['schedule'];
+            $this->cells['data'][$n]['schedules'][$position[1]]['schedule'] = 'L';            
+            $this->cells['data'][$position[0]]['schedules'][$position[1]]['schedule'] = $prevValue;
+
+        }
     }
 
     private function reinforcementLearning(){
-
+        $this->swap();
     }
 
     private function hillClimbing(){
