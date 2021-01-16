@@ -223,6 +223,9 @@ class Generate{
             unset($shift[0]);
         }
 
+        // Pattern MML
+
+
 
         // 6X masuk 1x libur
         // Jika 6 hari sebelumnya libur, maka hari ini libur
@@ -295,11 +298,33 @@ class Generate{
 
             $jadwalAnggota = array_column($anggotas, 'schedule');
 
-            $diff = array_diff($shift, array_unique($jadwalAnggota));
+            // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+            $filterJadwalNull = array_filter($jadwalAnggota);
+            if(!empty($filterJadwalNull)){
+                $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+                if(!empty($hitungJadwalYgSama)){
+                    foreach($hitungJadwalYgSama as $jadwal => $jumlah){
+                        if($jumlah >= count($anggotas) * 20/100){
+                            if(( $key = array_search($jadwal, $answer)) !== false){
+                                var_dump($answer);
+                                unset($answer[$key]);
+                            }
+                        }
+                    }    
+                }        
+            }
 
+            // Tiap shift harus ada yg masuk
+            $diff = array_diff($shift, array_unique($jadwalAnggota));
+                
             if(!empty($diff)){
                 $answer = $diff;
             }
+    
+        }
+
+        if(empty($answer)){
+            die();
         }
 
         $result = $shift[array_rand($answer)];
