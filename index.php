@@ -2,7 +2,12 @@
 
 include 'Generate.php';
 $schedule = new Generate(2008, 02, 'data/asoka.txt');
-$schedules = $schedule->initalize();
+$schedule->initalize();
+// $schedule->reinforcementLearning(300);
+// $schedule->hillClimbing(1000);
+
+$schedules = $schedule->cells;
+
 
 ?>
 
@@ -31,7 +36,7 @@ JFI: <?= $schedules['jfi'] ?>
     </thead>
     <tbody>
         
-        <?php foreach($schedules['data'] as $key => $schedule): ?>            
+        <?php foreach($schedules['data'] as $key => $schedule): ?>
             <tr>
                 <td>
                     <?= $schedule['nama']; ?><br>

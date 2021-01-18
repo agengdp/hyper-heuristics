@@ -3,7 +3,7 @@ v- shift ada 3 dalam sehari (Pagi, Siang, Malam)
 v- harus ada 1 Senior tiap shift
 v- karu Pagi terus minggu libur
 v- 1 bulan 4x libur
-v- 6 hari masuk 1x libur
+x- 6 hari masuk 1x libur
 v- shift tidak boleh urut dari Malam ke Pagi
 v- pattern tidak boleh gandeng 3 ex: MMM
 - pattern MML

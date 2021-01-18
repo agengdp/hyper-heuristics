@@ -28,7 +28,7 @@ class Generate{
      *
      * @var array
      */
-    private $cells;
+    public $cells;
 
 
     /**
@@ -113,10 +113,9 @@ class Generate{
 
         $this->cells = $this->solve($this->cells);
         $this->mapByEmployee();
-        // $this->swap();
         $this->countJFI();
 
-        return $this->cells;
+        return $this;
 
     }
 
@@ -174,7 +173,6 @@ class Generate{
 
                 if($answer !== false){
                     $cells[$column][$row]['schedule']   = $answer['schedule'];
-                    $cells[$column][$row]['bobot']      = $answer['bobot'];
                 }
             }
 
@@ -204,14 +202,12 @@ class Generate{
 
             if($isSunday){
                 return [
-                    'schedule'      => $shift[3],
-                    'bobot'         => 0 // khusus karu bobot dibikin 0 semua
+                    'schedule'      => $shift[3]
                 ];
             }
 
             return [
-                'schedule'      => $shift[0],
-                'bobot'         => 0 // khusus karu bobot dibikin 0 semua
+                'schedule'      => $shift[0]
             ];
         }
 
@@ -229,12 +225,22 @@ class Generate{
 
         // 6X masuk 1x libur
         // Jika 6 hari sebelumnya libur, maka hari ini libur
-        if(isset($cells[$column - 7][$row]['schedule']) && $cells[$column - 7][$row]['schedule'] === 'L'){
-            return [
-                'schedule'      => $shift[3],
-                'bobot'         => 4
-            ];
-        }
+        // if(isset($cells[$column - 7][$row]['schedule']) && $cells[$column - 7][$row]['schedule'] === 'L'){
+            
+        //     $bobot = 0;
+        //     $day = date('w', strtotime($this->month . '/' . $date . '/' . $this->year));
+        //     if($day === 0){
+        //         $bobot = 4;
+        //     }elseif($day === 6){
+        //         $bobot = 2;
+        //     }else{
+        //         $bobot = 1;
+        //     }
+        //     return [
+        //         'schedule'      => $shift[3],
+        //         'bobot'         => $bobot
+        //     ];
+        // }
 
         // Gaboleh libur gandeng dalam jangka waktu 6 hari
         for($i = 0; $i < 7; $i++){
@@ -298,14 +304,16 @@ class Generate{
                 return $arr['employee']['jabatan'] == 'anggota';
             });
 
-            $jadwalAnggota = array_column($anggotas, 'schedule');
+            $jadwalAnggota      = array_column($anggotas, 'schedule');
 
             // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
             $filterJadwalNull = array_filter($jadwalAnggota);
+            unset($filterJadwalNull['L']);
+            
             if(!empty($filterJadwalNull)){
                 $hitungJadwalYgSama = array_count_values($filterJadwalNull);
                 foreach($hitungJadwalYgSama as $jadwal => $jumlah){
-                    if($jumlah >= count($anggotas) * 30/100){
+                    if($jumlah > count($anggotas) * 30/100){
                         if(( $key = array_search($jadwal, $answer)) !== false){
                             unset($answer[$key]);
                         }
@@ -329,21 +337,8 @@ class Generate{
 
         $result = $shift[array_rand($answer)];
 
-        $bobot = 0;
-        if($result == 'L'){
-            $day = date('w', strtotime($this->month . '/' . $date . '/' . $this->year));
-            if($day === 0){
-                $bobot = 4;
-            }elseif($day === 6){
-                $bobot = 2;
-            }else{
-                $bobot = 1;
-            }
-        }
-
         return [
-            'schedule'      => $result,
-            'bobot'         => $bobot
+            'schedule'      => $result
         ];
 
     }
@@ -362,8 +357,7 @@ class Generate{
                 $cells[$x]              = $row['employee'];
                 foreach($this->cells as $k => $r){
                     $cells[$x]['schedules'][] = [
-                        'schedule'      => $r[$x]['schedule'],
-                        'bobot'         => $r[$x]['bobot']
+                        'schedule'      => $r[$x]['schedule']
                     ];
                 }
             }
@@ -385,7 +379,22 @@ class Generate{
 
         foreach($this->cells['data'] as $x => $row){
 
-            $totalBobot = array_sum(array_column($row['schedules'], 'bobot'));
+            $bobot = 0;
+            foreach($row['schedules'] as $key => $schedule){
+                if($schedule['schedule'] == 'L'){
+                    $date = $key +1;
+                    $day = date('w', strtotime($this->month . '/' . $date . '/' . $this->year));
+                    if($day == 0){
+                        $bobot += 4;
+                    }elseif($day == 6){
+                        $bobot += 2;
+                    }else{
+                        $bobot += 1;
+                    }
+                }
+            }
+
+            $totalBobot = $bobot;
             $cells[$x]  = $row;
             $cells[$x]['bobot'] = $totalBobot;
 
@@ -398,8 +407,9 @@ class Generate{
 
         $jmlSumEmpKuadrat = pow($jmlSumEmp, 2);
         $jfi = $jmlSumEmpKuadrat / (count($this->employees) * $jmlEmpKuadrat);
-
-        return $this->cells['jfi'] = $jfi;
+        
+        $this->cells['jfi'] = $jfi;
+        return $jfi;
     }
 
     /**
@@ -409,13 +419,17 @@ class Generate{
      */
     private function countSunday(){
 
-        $totaldays = date('t',strtotime($this->year.'-'.$this->month.'-01'));
-        $countday = 4;
-        if(($totaldays - $day) >= 28 ){
-            $countday = 5;      
+        $totaldays = date('t', strtotime($this->year.'-'.$this->month.'-01'));
+
+        $week = 0;
+        for($i = 1; $i <= $totaldays; $i++){
+            $day = date('w', strtotime($this->year.'-'.$this->month.'-'. $i));
+            if($day == 0){
+                $week += 1;
+            }
         }
-        return $countday;
-    
+        return $week;
+   
     }
 
     /**
@@ -425,53 +439,210 @@ class Generate{
      */
     private function move(){
         $jmlLiburSeharusnya = $this->countSunday();
-        $selisih    = 0;
-        $jmlLibur   = 0;
+        foreach($this->cells['data'] as $x => $employee){
+            
+            if($employee['jabatan'] == 'karu'){
+                continue;
+            }
+            if($employee['jabatan'] == 'senior'){
+                continue;
+            }
 
-        foreach($this->cells['data'] as $x => $employees){
-            $posisiM = []; // ($x, $y)
+            $posisiNonL = [];
 
+            foreach($employee['schedules'] as $y => $value){
+                if($value['schedule'] == 'M' && $employee['schedules'][$y]['schedule'] !== 'L'){
+                    $posisiNonL[] = $y;
+                }
+            }
+
+            // cek apakah jumlah libur sesuai dengan real
+            $filterJadwalNull = array_filter(array_column($employee['schedules'], 'schedule'));
+            $libur = array_count_values($filterJadwalNull);
+
+            if(isset($libur['L']) && $libur['L'] <= $jmlLiburSeharusnya){
+                $change     = array_rand($posisiNonL);
+                $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'L';
+            }
 
         }
 
     }
 
-    /**
+     /**
      * Swap
      * @return void
      */
     private function swap(){
         $positions = []; // [$x, $y]
 
-        foreach($this->cells['data'] as $x => $employees){
-            foreach ($employees['schedules'] as $y => $value) {
+        foreach($this->cells['data'] as $x => $employee){
+
+            // skip jabatan karu
+            if($employee['jabatan'] == 'karu'){
+                continue;
+            }
+            if($employee['jabatan'] == 'senior'){
+                continue;
+            }
+
+            foreach ($employee['schedules'] as $y => $value) {
                 if($value['schedule'] === 'L'){
                     $positions[] = [$x, $y];
                 }
             }
         }
-
+        
         foreach($positions as $position){
 
             // Generate random number of employee
             // with exclude current position as result
-            $n = 0;
-            while( in_array( ($n = random_int(0, count($this->cells['data']))), array($position[0])));
+            $n = 1;
+            while( in_array( ($n = random_int(1, count($this->cells['data']) - 1)), array($position[0])));
 
             // Swap jadwal staf pertama dan kedua
             $prevValue = $this->cells['data'][$n]['schedules'][$position[1]]['schedule'];
-            $this->cells['data'][$n]['schedules'][$position[1]]['schedule'] = 'L';            
+            $this->cells['data'][$n]['schedules'][$position[1]]['schedule'] = 'L';
             $this->cells['data'][$position[0]]['schedules'][$position[1]]['schedule'] = $prevValue;
+        }
+
+    }
+
+    /**
+     * Reinforcement Learning
+     *
+     * @param int $iteration
+     * @return void
+     */
+    public function reinforcementLearning($iteration){
+        $lowLevels = ['move', 'swap'];
+
+        $scores = [
+            'move'  => 10,
+            'swap'  => 10
+        ];
+
+        $currentJFI = $bestJFI = $this->countJFI();
+
+        for($i = 0; $i < $iteration; $i++){
+
+            // hentikan jika move / swap sudah sampek skor 20
+            if(
+                $scores['move'] === 20 || $scores['swap'] === 20 ||
+                $scores['move'] === 0 || $scores['swap'] === 0
+            ){
+
+                return $this->cells;
+                break;
+            }
+
+            $currentCells = $this->cells;
+
+            echo $scores['move'] . ' || '. $scores['swap'] . ' <br/>' ;
+
+            // Jika nilai move & swap sama maka random
+            if($scores['move'] == $scores['swap']){
+                $method = array_rand($lowLevels);
+                $call = $this->{$lowLevels[$method]}();
+                $currentJFI = $this->countJFI();
+
+                if($currentJFI > $bestJFI){
+                    if($method == 0){
+                        $method = 'move';
+                        $scores['move']++;
+                    }else{
+                        $method = 'swap';
+                        $scores['swap']++;
+                    }
+                }else{
+                    if($method == 1){
+                        $method = 'move';
+                        $scores['move']--;
+                    }else{
+                        $method = 'swap';
+                        $scores['swap']--;
+                    }
+                }
+
+            }elseif( $scores['move'] < $scores['swap']){
+                $this->swap();
+                $method = 'swap';
+                $currentJFI = $this->countJFI();
+
+                if($currentJFI > $bestJFI){
+                    $scores['swap']++;
+                }else{
+                    $scores['swap']--;
+                }
+
+            }else{
+                $this->move();
+                $method = 'move';
+                $currentJFI = $this->countJFI();
+
+                if($currentJFI > $bestJFI){
+                    $scores['move']++;
+                }else{
+                    $scores['move']--;
+                }
+            }
+
+            echo $currentJFI . ' || ' . $bestJFI . ' || ' . $method .'<br/>';
+
+            if($currentJFI > $bestJFI){
+                $bestJFI = $currentJFI;
+            }else{
+                $this->cells = $currentCells;
+            }
 
         }
     }
 
-    private function reinforcementLearning(){
-        $this->swap();
+    /**
+     * Hill Climbing
+     *
+     * @param int $iteration
+     * @return void
+     */
+    public function hillClimbing($iteration){
+        $currentJFI = $bestJFI = $this->countJFI();
+
+        for($i = 0; $i < $iteration; $i++){
+
+            $currentCells = $this->cells;
+
+            if($this->f_rand(0, 1) < 0.5){
+                $method = 'move';
+                $this->move();
+                $currentJFI = $this->countJFI();
+
+            }else{
+                $method = 'swap';
+                $this->swap();
+                $currentJFI = $this->countJFI();
+            }
+
+            if($currentJFI > $bestJFI){
+                $bestJFI = $currentJFI;
+            }else{
+                $this->cells = $currentCells;
+            }
+
+        }
+
     }
 
-    private function hillClimbing(){
-
+    /**
+     * Generate double precision random
+     *
+     * @param integer $min
+     * @param integer $max
+     * @param integer $mul
+     * @return void
+     */
+    private function f_rand($min=0,$max=1,$mul=1000000){
+        if ($min>$max) return false;
+        return mt_rand($min*$mul,$max*$mul)/$mul;
     }
 
 
