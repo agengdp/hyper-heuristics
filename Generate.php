@@ -482,34 +482,43 @@ class Generate{
      * @return void
      */
     private function move(){
-        $jmlLiburSeharusnya = $this->countSunday();
-        foreach($this->cells['data'] as $x => $employee){
+        $cellIndex = array_rand($this->cells['data']);
+        $findLposition = array_filter($this->cells['data'][$cellIndex]['schedules'], function($arr){
+            return $arr = $arr['schedule'] == 'L';
+        });
+
+        $dateIndex = array_rand($findLposition);
+        
+        
+
+
+        // foreach($this->cells['data'] as $x => $employee){
             
-            if($employee['jabatan'] == 'karu'){
-                continue;
-            }
-            if($employee['jabatan'] == 'senior'){
-                continue;
-            }
+        //     if($employee['jabatan'] == 'karu'){
+        //         continue;
+        //     }
+        //     if($employee['jabatan'] == 'senior'){
+        //         continue;
+        //     }
 
-            $posisiNonL = [];
+        //     $posisiL = [];
 
-            foreach($employee['schedules'] as $y => $value){
-                if($value['schedule'] == 'M' && isset($employee['schedules'][$y]['schedule']) && $employee['schedules'][$y]['schedule'] !== 'L'){
-                    $posisiNonL[] = $y;
-                }
-            }
+        //     foreach($employee['schedules'] as $y => $value){
+        //         if($value['schedule'] == 'M' && isset($employee['schedules'][$y]['schedule']) && $employee['schedules'][$y]['schedule'] !== 'L'){
+        //             $posisiNonL[] = $y;
+        //         }
+        //     }
 
-            // cek apakah jumlah libur sesuai dengan real
-            // $filterJadwalNull = array_filter(array_column($employee['schedules'], 'schedule'));
-            // $libur = array_count_values($filterJadwalNull);
+        //     // cek apakah jumlah libur sesuai dengan real
+        //     // $filterJadwalNull = array_filter(array_column($employee['schedules'], 'schedule'));
+        //     // $libur = array_count_values($filterJadwalNull);
 
-            // if(isset($libur['L']) && $libur['L'] <= $jmlLiburSeharusnya){
-            //     $change     = array_rand($posisiNonL);
-            //     $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'L';
-            // }
+        //     // if(isset($libur['L']) && $libur['L'] <= $jmlLiburSeharusnya){
+        //     //     $change     = array_rand($posisiNonL);
+        //     //     $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'L';
+        //     // }
 
-        }
+        // }
 
     }
 
