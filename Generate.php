@@ -113,10 +113,50 @@ class Generate{
 
         $this->cells = $this->solve($this->cells);
         $this->mapByEmployee();
+        $this->validateLibur();
         $this->countJFI();
 
         return $this;
 
+    }
+
+    /**
+     * Validate libur sudah sesuai tiap rows
+     *
+     * @return void
+     */
+    private function validateLibur(){
+        $jmlLiburSeharusnya = $this->countSunday();
+        foreach ($this->cells['data'] as $x => $employee){
+
+            if($employee['jabatan'] == 'karu'){
+                continue;
+            }
+
+            $posisiNonL = [];
+            $posisiL    = [];
+            foreach($employee['schedules'] as $y => $value){
+                if($value['schedule'] == 'M' && isset($employee['schedules'][$y]['schedule']) && $employee['schedules'][$y]['schedule'] !== 'L'){
+                    $posisiNonL[] = $y;
+                }
+
+                if($value == 'L'){
+                    $posisiL[] = $y;
+                }
+            }
+
+            $filterJadwalNull = array_filter(array_column($employee['schedules'], 'schedule'));
+            $libur = array_count_values($filterJadwalNull);
+
+            if(isset($libur['L']) && $libur['L'] < $jmlLiburSeharusnya){
+                $change     = array_rand($posisiNonL);
+                $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'L';
+            }elseif(isset($libur['L']) && $libur['L'] > $jmlLiburSeharusnya){
+                $change     = array_rand($posisiL);
+                $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'M';
+            }
+
+        }
     }
 
     /**
@@ -227,20 +267,24 @@ class Generate{
         // Jika 6 hari sebelumnya libur, maka hari ini libur
         // if(isset($cells[$column - 7][$row]['schedule']) && $cells[$column - 7][$row]['schedule'] === 'L'){
             
-        //     $bobot = 0;
         //     $day = date('w', strtotime($this->month . '/' . $date . '/' . $this->year));
-        //     if($day === 0){
-        //         $bobot = 4;
-        //     }elseif($day === 6){
-        //         $bobot = 2;
-        //     }else{
-        //         $bobot = 1;
-        //     }
+        
         //     return [
         //         'schedule'      => $shift[3],
-        //         'bobot'         => $bobot
         //     ];
         // }
+
+        // Libur tidak boleh lebih dari jumlah hari minggu
+        $sunday =  $this->countSunday();
+        $libur = 0;
+        for($i = 0; $i < count($cells); $i++) {
+            if($cells[$i][$row]['schedule'] == 'L'){
+                $libur +=1;
+            }           
+        }
+        if($libur >= $sunday){
+            unset($shift[3]);
+        }
 
         // Gaboleh libur gandeng dalam jangka waktu 6 hari
         for($i = 0; $i < 7; $i++){
@@ -451,19 +495,19 @@ class Generate{
             $posisiNonL = [];
 
             foreach($employee['schedules'] as $y => $value){
-                if($value['schedule'] == 'M' && $employee['schedules'][$y]['schedule'] !== 'L'){
+                if($value['schedule'] == 'M' && isset($employee['schedules'][$y]['schedule']) && $employee['schedules'][$y]['schedule'] !== 'L'){
                     $posisiNonL[] = $y;
                 }
             }
 
             // cek apakah jumlah libur sesuai dengan real
-            $filterJadwalNull = array_filter(array_column($employee['schedules'], 'schedule'));
-            $libur = array_count_values($filterJadwalNull);
+            // $filterJadwalNull = array_filter(array_column($employee['schedules'], 'schedule'));
+            // $libur = array_count_values($filterJadwalNull);
 
-            if(isset($libur['L']) && $libur['L'] <= $jmlLiburSeharusnya){
-                $change     = array_rand($posisiNonL);
-                $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'L';
-            }
+            // if(isset($libur['L']) && $libur['L'] <= $jmlLiburSeharusnya){
+            //     $change     = array_rand($posisiNonL);
+            //     $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'L';
+            // }
 
         }
 
@@ -538,7 +582,7 @@ class Generate{
 
             $currentCells = $this->cells;
 
-            echo $scores['move'] . ' || '. $scores['swap'] . ' <br/>' ;
+            // echo $scores['move'] . ' || '. $scores['swap'] . ' <br/>' ;
 
             // Jika nilai move & swap sama maka random
             if($scores['move'] == $scores['swap']){
@@ -587,7 +631,7 @@ class Generate{
                 }
             }
 
-            echo $currentJFI . ' || ' . $bestJFI . ' || ' . $method .'<br/>';
+            // echo $currentJFI . ' || ' . $bestJFI . ' || ' . $method .'<br/>';
 
             if($currentJFI > $bestJFI){
                 $bestJFI = $currentJFI;
