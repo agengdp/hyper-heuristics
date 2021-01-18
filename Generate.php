@@ -290,6 +290,8 @@ class Generate{
         // Anggota Constraint
         if($cells[$column][$row]['employee']['jabatan'] === 'anggota'){
 
+            $unfilterAnswer = $answer;
+
             // Tiap shift harus ada yg masuk
             // Filter anggota only
             $anggotas = array_filter($cells[$column], function($arr){
@@ -302,16 +304,17 @@ class Generate{
             $filterJadwalNull = array_filter($jadwalAnggota);
             if(!empty($filterJadwalNull)){
                 $hitungJadwalYgSama = array_count_values($filterJadwalNull);
-                if(!empty($hitungJadwalYgSama)){
-                    foreach($hitungJadwalYgSama as $jadwal => $jumlah){
-                        if($jumlah >= count($anggotas) * 20/100){
-                            if(( $key = array_search($jadwal, $answer)) !== false){
-                                var_dump($answer);
-                                unset($answer[$key]);
-                            }
+                foreach($hitungJadwalYgSama as $jadwal => $jumlah){
+                    if($jumlah >= count($anggotas) * 30/100){
+                        if(( $key = array_search($jadwal, $answer)) !== false){
+                            unset($answer[$key]);
                         }
-                    }    
-                }        
+                    }
+                }
+            }
+
+            if(empty($answer)){
+                $answer = $unfilterAnswer;
             }
 
             // Tiap shift harus ada yg masuk
@@ -323,9 +326,6 @@ class Generate{
     
         }
 
-        if(empty($answer)){
-            die();
-        }
 
         $result = $shift[array_rand($answer)];
 
