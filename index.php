@@ -3,8 +3,8 @@
 include 'Generate.php';
 $schedule = new Generate(2008, 02, 'data/asoka.txt');
 $schedule->initalize();
-$schedule->reinforcementLearning(300);
-// $schedule->hillClimbing(1000);
+// $schedule->reinforcementLearning(1000);
+$schedule->hillClimbing(1000);
 
 $schedules = $schedule->cells;
 

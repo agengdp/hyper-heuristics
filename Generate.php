@@ -482,44 +482,30 @@ class Generate{
      * @return void
      */
     private function move(){
-        $cellIndex = array_rand($this->cells['data']);
-        $findLposition = array_filter($this->cells['data'][$cellIndex]['schedules'], function($arr){
+
+        // Random find Employee excluxe 0 (Karu)
+        $employeeIndex = 1;
+        while( in_array( ($employeeIndex = random_int(1, count($this->cells['data']) - 1)), array(0)));
+
+        $findLposition = array_filter($this->cells['data'][$employeeIndex]['schedules'], function($arr){
             return $arr = $arr['schedule'] == 'L';
         });
 
         $dateIndex = array_rand($findLposition);
-        
-        
 
+        $afterValue = '';
+        if(isset($this->cells['data'][$employeeIndex][$dateIndex + 1])){
+            $afterValue = $this->cells['data'][$employeeIndex]['schedules'][$dateIndex + 1]['schedule'];
+        }
 
-        // foreach($this->cells['data'] as $x => $employee){
-            
-        //     if($employee['jabatan'] == 'karu'){
-        //         continue;
-        //     }
-        //     if($employee['jabatan'] == 'senior'){
-        //         continue;
-        //     }
-
-        //     $posisiL = [];
-
-        //     foreach($employee['schedules'] as $y => $value){
-        //         if($value['schedule'] == 'M' && isset($employee['schedules'][$y]['schedule']) && $employee['schedules'][$y]['schedule'] !== 'L'){
-        //             $posisiNonL[] = $y;
-        //         }
-        //     }
-
-        //     // cek apakah jumlah libur sesuai dengan real
-        //     // $filterJadwalNull = array_filter(array_column($employee['schedules'], 'schedule'));
-        //     // $libur = array_count_values($filterJadwalNull);
-
-        //     // if(isset($libur['L']) && $libur['L'] <= $jmlLiburSeharusnya){
-        //     //     $change     = array_rand($posisiNonL);
-        //     //     $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'L';
-        //     // }
-
-        // }
-
+        if(!empty($afterValue)){
+            $this->cells['data'][$employeeIndex]['schedules'][$dateIndex]['schedule'] = $afterValue;
+            $this->cells['data'][$employeeIndex]['schedules'][$dateIndex + 1]['schedule'] = 'L';
+        }else{
+            $shift = ['P', 'S', 'M'];
+            $this->cells['data'][$employeeIndex]['schedules'][$dateIndex]['schedule'] = $this->cells['data'][$employeeIndex]['schedules'][0]['schedule'];
+            $this->cells['data'][$employeeIndex]['schedules'][0]['schedule'] = 'L';
+        }
     }
 
      /**
@@ -527,36 +513,38 @@ class Generate{
      * @return void
      */
     private function swap(){
-        $positions = []; // [$x, $y]
 
-        foreach($this->cells['data'] as $x => $employee){
+        // Random find Employee excluxe 0 (Karu)
+        // $employeeIndex = array_rand($this->cells['data']);
+        $employeeIndex = 0;
+        while( in_array( ($employeeIndex = random_int(1, count($this->cells['data']) - 1)), array(0)));
 
-            // skip jabatan karu
-            if($employee['jabatan'] == 'karu'){
-                continue;
-            }
-            if($employee['jabatan'] == 'senior'){
-                continue;
-            }
+        // Random find employee exclude current
+        $otherEmployeeIndex = 1;
+        while( in_array( ($otherEmployeeIndex = random_int(1, count($this->cells['data']) - 1)), array($employeeIndex)));
 
-            foreach ($employee['schedules'] as $y => $value) {
-                if($value['schedule'] === 'L'){
-                    $positions[] = [$x, $y];
-                }
-            }
-        }
-        
-        foreach($positions as $position){
+        $findCurrentLposition = array_filter($this->cells['data'][$employeeIndex]['schedules'], function($arr){
+            return $arr = $arr['schedule'] == 'L';
+        });
 
-            // Generate random number of employee
-            // with exclude current position as result
-            $n = 1;
-            while( in_array( ($n = random_int(1, count($this->cells['data']) - 1)), array($position[0])));
+        $findOtherLposition = array_filter($this->cells['data'][$otherEmployeeIndex]['schedules'], function($arr){
+            return $arr = $arr['schedule'] == 'L';
+        });
 
-            // Swap jadwal staf pertama dan kedua
-            $prevValue = $this->cells['data'][$n]['schedules'][$position[1]]['schedule'];
-            $this->cells['data'][$n]['schedules'][$position[1]]['schedule'] = 'L';
-            $this->cells['data'][$position[0]]['schedules'][$position[1]]['schedule'] = $prevValue;
+        $currentLposition = array_rand($findCurrentLposition);
+        $otherLposition = array_rand($findOtherLposition);
+
+        $currentPositionForSwapValue    = $this->cells['data'][$employeeIndex]['schedules'][$otherLposition]['schedule'];
+        $otherPositionForSwapValue      = $this->cells['data'][$otherEmployeeIndex]['schedules'][$currentLposition]['schedule'];
+
+        if($currentPositionForSwapValue !== 'L' && $otherPositionForSwapValue !== 'L'){
+            $this->cells['data'][$otherEmployeeIndex]['schedules'][$currentLposition]['schedule']   = 'L';
+            $this->cells['data'][$employeeIndex]['schedules'][$currentLposition]['schedule']        = $otherPositionForSwapValue;
+
+            $this->cells['data'][$employeeIndex]['schedules'][$otherLposition]['schedule']          = 'L';
+            $this->cells['data'][$otherEmployeeIndex]['schedules'][$otherLposition]['schedule']     = $otherPositionForSwapValue;
+        }else{
+            $this->swap();
         }
 
     }
@@ -591,7 +579,7 @@ class Generate{
 
             $currentCells = $this->cells;
 
-            // echo $scores['move'] . ' || '. $scores['swap'] . ' <br/>' ;
+            echo $scores['move'] . ' || '. $scores['swap'] . ' <br/>' ;
 
             // Jika nilai move & swap sama maka random
             if($scores['move'] == $scores['swap']){
@@ -640,7 +628,7 @@ class Generate{
                 }
             }
 
-            // echo $currentJFI . ' || ' . $bestJFI . ' || ' . $method .'<br/>';
+            echo $currentJFI . ' || ' . $bestJFI . ' || ' . $method .'<br/>';
 
             if($currentJFI > $bestJFI){
                 $bestJFI = $currentJFI;
@@ -680,6 +668,9 @@ class Generate{
             }else{
                 $this->cells = $currentCells;
             }
+
+            echo $currentJFI . ' || ' . $bestJFI . ' || ' . $method .' || '. $i .'<br/>';
+
 
         }
 
