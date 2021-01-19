@@ -1,10 +1,10 @@
 <?php
 
 include 'Generate.php';
-$schedule = new Generate(2008, 02, 'data/asoka.txt');
+$schedule = new Generate(2020, 11, 'data/asoka.txt');
 $schedule->initalize();
 // $schedule->reinforcementLearning(1000);
-$schedule->hillClimbing(1000);
+// $schedule->hillClimbing(1000);
 
 $schedules = $schedule->cells;
 
@@ -27,17 +27,17 @@ JFI: <?= $schedules['jfi'] ?>
             <th>
                 X
             </th>
-
+            <th>Nama</th>
             <?php $day = 0; foreach($schedules['data'][0]['schedules'] as $schedule): $day++ ?>
                 <th><?=$day?></th>
             <?php endforeach; ?>
-            <th>bobot</th>
         </tr>
     </thead>
     <tbody>
         
         <?php foreach($schedules['data'] as $key => $schedule): ?>
             <tr>
+                <td><?= $key ?></td>
                 <td>
                     <?= $schedule['nama']; ?><br>
                     <?= $schedule['jabatan']; ?><br>
@@ -58,7 +58,6 @@ JFI: <?= $schedules['jfi'] ?>
                     
                     <td style="text-align: center;background:<?= $bg ?>"><?= $value['schedule']; ?></td>
                 <?php endforeach; ?>
-                <td style="text-align:center"></tr>
             </tr>
         <?php endforeach; ?>
     </tbody>

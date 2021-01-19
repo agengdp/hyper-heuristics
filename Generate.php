@@ -113,7 +113,7 @@ class Generate{
 
         $this->cells = $this->solve($this->cells);
         $this->mapByEmployee();
-        $this->validateLibur();
+        // $this->validateLibur();
         $this->countJFI();
 
         return $this;
@@ -136,11 +136,11 @@ class Generate{
             $posisiNonL = [];
             $posisiL    = [];
             foreach($employee['schedules'] as $y => $value){
-                if($value['schedule'] == 'M' && isset($employee['schedules'][$y]['schedule']) && $employee['schedules'][$y]['schedule'] !== 'L'){
+                if($value['schedule'] == 'M'){
                     $posisiNonL[] = $y;
                 }
 
-                if($value == 'L'){
+                if($value['schedule'] == 'L'){
                     $posisiL[] = $y;
                 }
             }
@@ -148,10 +148,10 @@ class Generate{
             $filterJadwalNull = array_filter(array_column($employee['schedules'], 'schedule'));
             $libur = array_count_values($filterJadwalNull);
 
-            if(isset($libur['L']) && $libur['L'] < $jmlLiburSeharusnya){
+            if(isset($libur['L']) && $libur['L'] <= $jmlLiburSeharusnya){
                 $change     = array_rand($posisiNonL);
                 $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'L';
-            }elseif(isset($libur['L']) && $libur['L'] > $jmlLiburSeharusnya){
+            }elseif(isset($libur['L']) && $libur['L'] >= $jmlLiburSeharusnya){
                 $change     = array_rand($posisiL);
                 $this->cells['data'][$x]['schedules'][$change]['schedule']  = 'M';
             }
@@ -352,20 +352,56 @@ class Generate{
 
             // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
             $filterJadwalNull = array_filter($jadwalAnggota);
-            unset($filterJadwalNull['L']);
             
+            $persentase = count($anggotas) * 30/100;
+
             if(!empty($filterJadwalNull)){
                 $hitungJadwalYgSama = array_count_values($filterJadwalNull);
-                foreach($hitungJadwalYgSama as $jadwal => $jumlah){
-                    if($jumlah > count($anggotas) * 30/100){
-                        if(( $key = array_search($jadwal, $answer)) !== false){
-                            unset($answer[$key]);
+                unset($hitungJadwalYgSama['L']);
+                
+                $filterAnswer = array_filter($hitungJadwalYgSama, function($v) use($persentase){
+                    return $v <= $persentase;
+                });
+
+                $remapAnswer = [];
+                foreach($unfilterShift as $k => $v){
+                    if(( $key = array_search($v, $hitungJadwalYgSama)) !== false){
+                        if($hitungJadwalYgSama[$key] < $persentase){
+                            $remapAnswer[$k] = $v;
                         }
                     }
                 }
+
+                $answer = $remapAnswer;
+
+                // if(empty($filterAnswer)){
+                //     $answer = $unfilterAnswer;
+                // }else{
+                //     $remapAnswer = [];
+                //     foreach($filterAnswer as $jadwal => $jumlah){
+                //         if(( $key = array_search($jadwal, $answer)) !== false){
+                //             $remapAnswer[] = $answer;
+                //         }
+                //     }
+                //     $answer = $remapAnswer;
+    
+                // }
+    
             }
 
             if(empty($answer)){
+                echo $row . ' - ' . $column;
+                echo '<hr />';
+                echo 'unfilter answer: ';
+                var_dump($unfilterAnswer);
+                echo '<hr/>';
+                echo 'hitungjadwal: ';
+                var_dump($hitungJadwalYgSama);
+                echo '<hr/>';
+                echo 'answer: ';
+                var_dump($answer);
+                echo '<hr/>';
+
                 $answer = $unfilterAnswer;
             }
 
@@ -377,7 +413,6 @@ class Generate{
             }
     
         }
-
 
         $result = $shift[array_rand($answer)];
 
