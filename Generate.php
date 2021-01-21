@@ -30,6 +30,13 @@ class Generate{
      */
     public $cells;
 
+    /**
+     * Shift
+     * 
+     * @var array
+     */
+    public $shifts = ['P', 'S', 'M', 'L'];
+
 
     /**
      * Contructor
@@ -95,7 +102,6 @@ class Generate{
                 $cells[$x][$y] = [
                     'employee'      => $this->employees[$y],
                     'schedule'      => null,
-                    'bobot'           => 0
                 ];
             }
         }
@@ -112,8 +118,8 @@ class Generate{
     public function initalize(){
 
         $this->cells = $this->solve($this->cells);
+
         $this->mapByEmployee();
-        // $this->validateLibur();
         $this->countJFI();
 
         return $this;
@@ -166,11 +172,14 @@ class Generate{
      */
     private function solve($cells){
         
-        if($this->schedulePopulated($cells)){
+        if($this->solved($cells)){
             return $cells;
         }
 
-        return $this->populateSchedule($cells);
+        $possibilities  = $this->nextCells($cells);
+        $validCells     = $this->keepOnlyValid($possibilities);
+
+        return $this->searchForSolution($validCells);
     }
 
     /**
@@ -179,7 +188,7 @@ class Generate{
      * @param  array $cells 
      * @return bool
      */
-    private function schedulePopulated($cells){
+    private function solved($cells){
 
         foreach($cells as $values){
 
@@ -195,30 +204,280 @@ class Generate{
     }
 
     /**
+     * Create new cells and add assigned answer
+     * @param  array $cells 
+     * @return array
+     */
+    private function nextCells($cells){
+
+        $res = [];
+        $firstEmpty = $this->findEmpty($cells);
+
+        if($firstEmpty !== null){
+
+            $x = $firstEmpty[0];
+            $y = $firstEmpty[1];
+
+            foreach($this->shifts as $shift){
+
+                $cells[$x][$y]['schedule'] = $shift;
+                $res[] = $cells;
+            }
+
+        }
+
+        return $res;
+
+    }
+
+    /**
+     * Find empty cells
+     * @param  array $cells 
+     * @return mixed        
+     */
+    private function findEmpty($cells){
+
+        for($x = 0; $x < count($this->cells); $x++){
+            for($y = 0; $y < count($this->employees); $y++){
+
+                if($cells[$x][$y]['schedule'] === null){
+                    return [$x, $y];
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Keep valid answer
+     * @param  array $cells
+     * @return array
+     */
+    private function keepOnlyValid($cells){
+
+        $res = [];
+
+        for($x = 0; $x < count($cells); $x++){
+            if($this->validCells($cells[$x])){
+                $res[] = $cells[$x];
+            }
+        }
+
+        return $res;
+    }
+
+    /**
+     * Cek apakah cells valid
+     * @param  array $cells 
+     * @return boolean
+     */
+    private function validCells($cells){
+
+        return $this->karuConstraint($cells) &&
+               $this->liburTidakBolehGandengConstraint($cells) &&
+               $this->shiftTidakBolehGandengTigaKaliConstraint($cells) &&
+               $this->shiftTidakBolehDariMalamKePagiConstraint($cells) &&
+               $this->shiftHarusMaxTigaPuluhPersenMasuk($cells);
+
+    }
+
+    /**
+     * Karu constraint
+     * libur tiap hari minggu dan tiap hari Pagi
+     * 
+     * @param  array $cells
+     * @return boolean
+     */
+    private function karuConstraint($cells){
+
+        foreach($cells as $key => $cell){
+
+            foreach($cell as $employee){
+
+                if($employee['schedule'] == null){
+                    continue;
+                }
+                
+                if($employee['employee']['jabatan'] === 'karu'){
+
+                    $date = $key+1;
+                    $isSunday = date('w', strtotime($this->month . '/' . $date . '/' . $this->year)) == 0 ? true : false;
+
+                    if($isSunday && $employee['schedule'] !== 'L'){
+                        return false;
+                    }elseif(!$isSunday && $employee['schedule'] !== 'P'){
+                        return false;
+                    }
+                }
+
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Libur tidak boleh gandeng 2x atau lebih
+     * 
+     * @param  array $cells 
+     * @return bool
+     */
+    private function liburTidakBolehGandengConstraint($cells){
+
+        foreach($cells as $key => $cell){
+
+            foreach($cell as $empKey => $employee){
+
+                if($employee['schedule'] == null || $employee['employee']['jabatan'] === 'karu'){
+                    continue;
+                }
+
+                if(!isset($cells[$key - 1])){
+                    continue;
+                }
+
+                if(
+                    $cells[$key - 1][$empKey]['schedule'] === 'L' &&
+                    $cells[$key - 1][$empKey]['schedule'] === $employee['schedule']
+                ){
+                    return false;
+                }
+
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Shift tidak boleh gandeng 3 kali
+     * MMM, LLL, SSS
+     * 
+     * @param  array $cells 
+     * @return bool
+     */
+    private function shiftTidakBolehGandengTigaKaliConstraint($cells){
+        foreach($cells as $key => $cell){
+
+            foreach($cell as $empKey => $employee){
+
+                if($employee['schedule'] == null || $employee['employee']['jabatan'] === 'karu'){
+                    continue;
+                }
+
+                if(!isset($cells[$key - 2])){
+                    continue;
+                }
+
+                if(
+                    $cells[$key - 2][$empKey]['schedule'] === $cells[$key - 1][$empKey]['schedule'] &&
+                    $cells[$key - 1][$empKey]['schedule'] === $employee['schedule']
+                ){
+                    return false;
+                }
+
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Shift tidak boleh dari malam ke pagi
+     * M -> P
+     * 
+     * @param  array $cells 
+     * @return bool
+     */
+    private function shiftTidakBolehDariMalamKePagiConstraint($cells){
+        foreach($cells as $key => $cell){
+
+            foreach($cell as $empKey => $employee){
+
+                if($employee['schedule'] == null || $employee['employee']['jabatan'] === 'karu'){
+                    continue;
+                }
+
+                if(!isset($cells[$key - 1])){
+                    continue;
+                }
+
+                if(
+                    $cells[$key - 1][$empKey]['schedule'] === 'M' &&
+                    $employee['schedule']        === 'P'
+                ){
+                    return false;
+                }
+
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Tiap shift harus maksimal 30 masuk
+     * 
+     * @param  array $cells 
+     * @return bool
+     */
+    private function shiftHarusMaxTigaPuluhPersenMasuk($cells){
+        foreach($cells as $key => $cell){
+
+            foreach($cell as $empKey => $employee){
+
+                if($employee['schedule'] == null || $employee['employee']['jabatan'] !== 'anggota'){
+                    continue;
+                }
+
+                $anggotas = array_filter($cells[$key], function($arr){
+                    return $arr['employee']['jabatan'] == 'anggota';
+                });
+
+                $jadwalAnggota      = array_column($anggotas, 'schedule');
+
+                // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+                $filterJadwalNull = array_filter($jadwalAnggota);
+
+                if(!empty($filterJadwalNull)){
+
+                    $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+
+                    if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                        if($hitungJadwalYgSama[$employee['schedule']] > count($anggotas) * 30/100){
+                            return false;
+                        }                        
+                    }
+
+                }
+
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Populate schedule
      * 
      * @param  array $cells 
      * @return recursion
      */
-    private function populateSchedule($cells){
+    private function searchForSolution($cells){
 
-        foreach($cells as $column => $values){
-
-            foreach($values as $row => $value){
-                if($value['schedule'] !== null){
-                    continue;
-                }
-
-                $answer = $this->selectAnswer($cells, $column, $row);
-
-                if($answer !== false){
-                    $cells[$column][$row]['schedule']   = $answer['schedule'];
-                }
-            }
-
+        if(count($cells) < 1){
+            return false;
         }
 
-        return $this->solve($cells);
+        $first = array_shift($cells);
+        $tryPath = $this->solve($first);
+
+        if($tryPath !== false){
+            return $tryPath;
+        }
+
+        return $this->searchForSolution($cells);
     }
 
     /**
@@ -726,3 +985,6 @@ class Generate{
 
 
 }
+
+// $schedule = new Generate(2020, 11, 'data/asoka.txt');
+// $schedule->initalize();
