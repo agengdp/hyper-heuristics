@@ -278,7 +278,9 @@ class Generate{
                $this->liburTidakBolehGandengConstraint($cells) &&
                $this->shiftTidakBolehGandengTigaKaliConstraint($cells) &&
                $this->shiftTidakBolehDariMalamKePagiConstraint($cells) &&
-               $this->shiftHarusMaxTigaPuluhPersenMasuk($cells);
+               $this->shiftHarusMaxTigaPuluhPersenMasuk($cells) && 
+               $this->shiftHarusAdaYangJaga($cells)
+               ;
 
     }
 
@@ -448,6 +450,40 @@ class Generate{
                         if($hitungJadwalYgSama[$employee['schedule']] > count($anggotas) * 30/100){
                             return false;
                         }                        
+                    }
+
+                }
+
+            }
+        }
+
+        return true;
+    }
+
+    private function shiftHarusAdaYangJaga($cells){
+        foreach($cells as $key => $cell){
+
+            foreach($cell as $empKey => $employee){
+
+                if($employee['schedule'] == null || $employee['employee']['jabatan'] !== 'senior'){
+                    continue;
+                }
+
+                $anggotas = array_filter($cells[$key], function($arr){
+                    return $arr['employee']['jabatan'] == 'senior';
+                });
+
+                $jadwalAnggota      = array_column($anggotas, 'schedule');
+
+                // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+                $filterJadwalNull = array_filter($jadwalAnggota);
+                if(!empty($filterJadwalNull)){
+
+                    $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+
+                    var_dump($hitungJadwalYgSama);
+                    if(!isset($hitungJadwalYgSama[$employee['schedule']])){
+                        return false;
                     }
 
                 }
