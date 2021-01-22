@@ -8,6 +8,7 @@ v- shift tidak boleh urut dari Malam ke Pagi
 v- pattern tidak boleh gandeng 3 ex: MMM
 - pattern MML
 - anggota bagi rata 3 shift; max 30% dari jumlah. 
+- setting tiap shift per anggota, misal pagi harus ada 4, malem harus ada 2
 
 # JFI - Jain Fairness Index 
 Pemberian bobot tingkat keadilan untuk staff

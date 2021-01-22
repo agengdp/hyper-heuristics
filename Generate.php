@@ -183,6 +183,29 @@ class Generate{
     }
 
     /**
+     * Populate schedule
+     * 
+     * @param  array $cells 
+     * @return recursion
+     */
+    private function searchForSolution($cells){
+
+        if(count($cells) < 1){
+            return false;
+        }
+
+        $first = $cells[array_rand($cells)];
+        // $first = array_shift($cells);
+        $tryPath = $this->solve($first);
+
+        if($tryPath !== false){
+            return $tryPath;
+        }
+
+        return $this->searchForSolution($cells);
+    }
+
+    /**
      * Cek jadwal apakah sudah populated apa belum
      * 
      * @param  array $cells 
@@ -279,7 +302,8 @@ class Generate{
                $this->shiftTidakBolehGandengTigaKaliConstraint($cells) &&
                $this->shiftTidakBolehDariMalamKePagiConstraint($cells) &&
                $this->shiftHarusMaxTigaPuluhPersenMasuk($cells) && 
-               $this->shiftHarusAdaYangJaga($cells)
+               $this->shiftHarusAdaYangJaga($cells) &&
+               $this->jumlahLiburSesuaiJumlahMinggu($cells)
                ;
 
     }
@@ -460,6 +484,12 @@ class Generate{
         return true;
     }
 
+    /**
+     * Shift harus ada yang jaga
+     *
+     * @param array $cells
+     * @return void
+     */
     private function shiftHarusAdaYangJaga($cells){
         foreach($cells as $key => $cell){
 
@@ -477,13 +507,15 @@ class Generate{
 
                 // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
                 $filterJadwalNull = array_filter($jadwalAnggota);
+
                 if(!empty($filterJadwalNull)){
 
                     $hitungJadwalYgSama = array_count_values($filterJadwalNull);
 
-                    var_dump($hitungJadwalYgSama);
-                    if(!isset($hitungJadwalYgSama[$employee['schedule']])){
-                        return false;
+                    if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                        if($hitungJadwalYgSama[$employee['schedule']] > 2){ // entahlah @todo Kalo dibawah 2 not working
+                            return false;
+                        }                        
                     }
 
                 }
@@ -495,26 +527,92 @@ class Generate{
     }
 
     /**
-     * Populate schedule
-     * 
-     * @param  array $cells 
-     * @return recursion
+     * Jumlah libur sesuai dengan jumlah hari minggu
+     *
+     * @param string $cells
+     * @return void
      */
-    private function searchForSolution($cells){
+    private function jumlahLiburSesuaiJumlahMinggu($cells){
 
-        if(count($cells) < 1){
-            return false;
+        foreach($cells as $tgl => $employees){
+
+            foreach($employees as $empKey => $emp){
+                if($emp['employee']['jabatan'] === 'karu'){
+                    continue;
+                }
+
+                $empSchedule = [];
+                foreach($cells as $k => $v){
+                    if($v[$empKey]['schedule'] !== null){
+                        $empSchedule[] = $v[$empKey]['schedule'];
+                    }
+                }
+
+                $schedule = array_count_values($empSchedule);
+                if(isset($schedule['L']) && $schedule['L'] > $this->countSunday()){
+                    var_dump($cells);
+                    die();
+                    return false;
+                }
+            }
         }
 
-        $first = array_shift($cells);
-        $tryPath = $this->solve($first);
+        return true;
 
-        if($tryPath !== false){
-            return $tryPath;
+        for($emp = 0; $emp < count($cells[0]) - 1; $emp++){
+
+            $libur = 0;
+            for($tgl = 0; $tgl < count($cells) - 1; $tgl++){
+                if($cells[$tgl][$emp]['employee']['jabatan'] === 'karu'){
+                    continue;
+                }
+
+                if($cells[$tgl][$emp]['schedule'] === 'L'){
+                    $libur++;
+                }
+            }
+            // $libur++;
+            // var_dump($libur);
+
+            if($libur != $this->countSunday()){
+                return false;
+            }
         }
 
-        return $this->searchForSolution($cells);
+        return true;
+
+
+        // foreach($cell as $empKey => $employee){
+
+        //     if($employee['schedule'] == null || $employee['employee']['jabatan'] !== 'senior'){
+        //         continue;
+        //     }
+
+        //     $anggotas = array_filter($cells[$key], function($arr){
+        //         return $arr['employee']['jabatan'] == 'senior';
+        //     });
+
+        //     $jadwalAnggota      = array_column($anggotas, 'schedule');
+
+        //     // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+        //     $filterJadwalNull = array_filter($jadwalAnggota);
+
+        //     if(!empty($filterJadwalNull)){
+
+        //         $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+
+        //         if(isset($hitungJadwalYgSama[$employee['schedule']])){
+        //             if($hitungJadwalYgSama[$employee['schedule']] > 2){ // entahlah @todo Kalo dibawah 2 not working
+        //                 return false;
+        //             }                        
+        //         }
+
+        //     }
+
+        // }
+        // return true;
     }
+
 
     /**
      * Pilih jawaban
