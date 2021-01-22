@@ -297,6 +297,27 @@ class Generate{
      */
     private function validCells($cells){
 
+
+        foreach($cells as $tgl => $employees){
+
+            foreach($employees as $empKey => $employee){
+
+                if(
+
+                    $this->karuConstraint($date, $employee)
+
+                ){
+                    
+                }else{
+                    return false;
+                }
+
+            }
+
+        }
+
+        return true;
+
         return $this->karuConstraint($cells) &&
                $this->liburTidakBolehGandengConstraint($cells) &&
                $this->shiftTidakBolehGandengTigaKaliConstraint($cells) &&
@@ -315,32 +336,51 @@ class Generate{
      * @param  array $cells
      * @return boolean
      */
-    private function karuConstraint($cells){
+    private function karuConstraint($tglKey, $employee){
 
-        foreach($cells as $key => $cell){
+        if($employee['schedule'] === null){
+            return true;
+        }
 
-            foreach($cell as $employee){
+        if($employee['employee']['jabatan'] === 'karu'){
 
-                if($employee['schedule'] == null){
-                    continue;
-                }
-                
-                if($employee['employee']['jabatan'] === 'karu'){
+            $date       = $tglKey+1;
+            $isSunday   = date('w', strtotime($this->month . '/' . $date . '/' . $this->year)) == 0 ? true : false;
 
-                    $date = $key+1;
-                    $isSunday = date('w', strtotime($this->month . '/' . $date . '/' . $this->year)) == 0 ? true : false;
-
-                    if($isSunday && $employee['schedule'] !== 'L'){
-                        return false;
-                    }elseif(!$isSunday && $employee['schedule'] !== 'P'){
-                        return false;
-                    }
-                }
-
+            var_dump($date);
+            if($isSunday && $employee['schedule'] !== 'L'){
+                return false;
+            }elseif(!$isSunday && $employee['schedule'] !== 'P'){
+                return false;
             }
         }
 
         return true;
+
+        // foreach($cells as $key => $cell){
+
+        //     foreach($cell as $employee){
+
+        //         if($employee['schedule'] == null){
+        //             continue;
+        //         }
+                
+        //         if($employee['employee']['jabatan'] === 'karu'){
+
+        //             $date = $key+1;
+        //             $isSunday = date('w', strtotime($this->month . '/' . $date . '/' . $this->year)) == 0 ? true : false;
+
+        //             if($isSunday && $employee['schedule'] !== 'L'){
+        //                 return false;
+        //             }elseif(!$isSunday && $employee['schedule'] !== 'P'){
+        //                 return false;
+        //             }
+        //         }
+
+        //     }
+        // }
+
+        // return true;
     }
 
     /**
