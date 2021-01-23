@@ -307,10 +307,10 @@ class Generate{
                     $this->karuConstraint($tgl, $employee) && 
                     $this->liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee) &&
                     $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
-                    // $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
-                    // $this->shiftHarusMaxTigaPuluhPersenMasuk($cells, $tgl, $employee) &&
-                    $this->jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $employee)
-                    // $this->shiftHarusAdaYangJaga($cells, $tgl, $employee)
+                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
+                    $this->shiftHarusMaxTigaPuluhPersenMasuk($cells, $tgl, $employee) &&
+                    // $this->jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $employee)
+                    $this->shiftHarusAdaYangJaga($cells, $tgl, $employee)
                 ){
                     
                 }else{
