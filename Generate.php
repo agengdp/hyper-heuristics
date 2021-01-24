@@ -194,8 +194,8 @@ class Generate{
             return false;
         }
 
-        $first = $cells[array_rand($cells)];
-        // $first = array_shift($cells);
+        // $first = $cells[array_rand($cells)];
+        $first = array_shift($cells);
         $tryPath = $this->solve($first);
 
         if($tryPath !== false){
@@ -297,7 +297,23 @@ class Generate{
      */
     private function validCells($cells){
 
+        return $this->rowsGood($cells) && $this->columnsGood($cells);
 
+    }
+
+    private function rowsGood($cells){
+        foreach($cells as $tgl => $employees){
+
+            foreach($employees as $empKey => $employee){
+
+            }
+
+        }
+
+        return true;
+    }
+
+    private function columnsGood($cells){
         foreach($cells as $tgl => $employees){
 
             foreach($employees as $empKey => $employee){
@@ -309,37 +325,18 @@ class Generate{
                     $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
                     $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
                     $this->shiftHarusMaxTigaPuluhPersenMasuk($cells, $tgl, $employee) &&
-                    // $this->jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $employee)
+                    $this->jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $employee) &&
                     $this->shiftHarusAdaYangJaga($cells, $tgl, $employee)
                 ){
                     
                 }else{
                     return false;
                 }
-
             }
-
-            // if(
-            //     $this->shiftHarusAdaYangJaga($cells)
-            // ){
-
-            // }else{
-            //     return false;
-            // }
-
 
         }
 
         return true;
-
-        return $this->karuConstraint($cells) &&
-               $this->liburTidakBolehGandengConstraint($cells) &&
-               $this->shiftTidakBolehGandengTigaKaliConstraint($cells) &&
-               $this->shiftTidakBolehDariMalamKePagiConstraint($cells) &&
-               $this->shiftHarusMaxTigaPuluhPersenMasuk($cells) && 
-               $this->shiftHarusAdaYangJaga($cells) &&
-               $this->jumlahLiburSesuaiJumlahMinggu($cells)
-               ;
 
     }
 
