@@ -65,7 +65,7 @@ class Generate{
     /**
      * Format employee as desired
      *
-     * @return void
+     * @return array
      */
     private function formatEmployee($employee){
         $employees = fopen($employee, "r");
@@ -91,7 +91,7 @@ class Generate{
     /**
      * Generate cells
      *
-     * @return void
+     * @return array
      */
     private function generateCells(){
         $dayCount = date('t', strtotime($this->month . '/1/' . $this->year));
@@ -170,7 +170,7 @@ class Generate{
     /**
      * Solve program
      * @param  array $cells 
-     * @return void
+     * @return array
      */
     private function solve($cells){
         
@@ -188,7 +188,7 @@ class Generate{
      * Populate schedule
      * 
      * @param  array $cells 
-     * @return recursion
+     * @return mixed
      */
     private function searchForSolution($cells){
 
@@ -211,7 +211,7 @@ class Generate{
      * Cek jadwal apakah sudah populated apa belum
      * 
      * @param  array $cells 
-     * @return bool
+     * @return boolean
      */
     private function solved($cells){
 
@@ -230,7 +230,7 @@ class Generate{
 
     /**
      * Create new cells and add assigned answer
-     * @param  array $cells 
+     * @param  array $cells
      * @return array
      */
     private function nextCells($cells){
@@ -341,6 +341,8 @@ class Generate{
      * @return void
      */
     private function columnsGood($cells){
+
+        return true;
 
         foreach($cells as $tgl => $employees){
 

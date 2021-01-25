@@ -1,7 +1,7 @@
 <?php
 
 include 'Generate.php';
-$schedule = new Generate(2020, 11, 'data/igd.txt');
+$schedule = new Generate(2020, 11, 'igd.txt');
 $schedule->initalize();
 // $schedule->reinforcementLearning(1000);
 // $schedule->hillClimbing(1000);
