@@ -193,10 +193,11 @@ class Generate{
     private function searchForSolution($cells){
 
         if(count($cells) < 1){
-            return false;
+            echo 'Tidak ada solusi';
+            die();
         }
 
-        // $first = $cells[array_rand($cells)];
+//         $first = $cells[array_rand($cells)];
         $first = array_shift($cells);
         $tryPath = $this->solve($first);
 
@@ -307,7 +308,7 @@ class Generate{
      * Rows constraint
      *
      * @param array $cells
-     * @return void
+     * @return boolean
      */
     private function rowsGood($cells){
 
@@ -316,9 +317,9 @@ class Generate{
             foreach($employees as $empKey => $employee){
                 if(
 //                    $this->liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee) &&
-                      $this->formatMML($tgl, $empKey, $employee) &&
+//                      $this->formatMML($tgl, $empKey, $employee) &&
 //                    $this->jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee) &&
-                    $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
+//                    $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
 //                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
                     $this->karuConstraint($tgl, $employee)
                 ){
@@ -338,11 +339,10 @@ class Generate{
      * Columns constraint
      *
      * @param array $cells
-     * @return void
+     * @return boolean
      */
     private function columnsGood($cells){
 
-        return true;
 
         foreach($cells as $tgl => $employees){
 
@@ -666,29 +666,48 @@ class Generate{
      * Shift harus ada yang jaga
      *
      * @param array $cells
-     * @return void
+     * @return boolean
      */
     private function shiftSeniorHarusAdaYangJaga($cells, $tgl, $employee){
 
-        if($employee['schedule'] == null || $employee['employee']['jabatan'] !== 'senior'){
+        if($employee['schedule'] === null || $employee['employee']['jabatan'] !== 'senior'){
             return true;
         }
 
         $anggotas = array_filter($cells[$tgl], function($arr){
-            return $arr['employee']['jabatan'] == 'senior';
+            return $arr['employee']['jabatan'] === 'senior';
         });
 
         $jadwalAnggota      = array_column($anggotas, 'schedule');
-
         $filterJadwalNull = array_filter($jadwalAnggota);
 
         if(!empty($filterJadwalNull)){
-
             $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+//            var_dump($hitungJadwalYgSama);
+//            echo '<hr/>';
+//            var_dump($employee['schedule']);
+//            echo '<hr/>';
+//            if($hitungJadwalYgSama[$employee['schedule']] > 2){
+//                return false;
+//            }
 
-            if(isset($hitungJadwalYgSama[$employee['schedule']])){
-                
-                if($hitungJadwalYgSama[$employee['schedule']] > 2){ // entahlah @todo Kalo dibawah 2 not working
+            $availShift = array_keys($hitungJadwalYgSama);
+            $diff = array_diff($this->shifts, $availShift);
+
+            if(!empty($diff)){
+
+                                    var_dump($diff);
+                    echo '<hr/>';
+
+                if(!in_array($employee['schedule'], array_values($diff))){
+
+                    var_dump($tgl);
+                    echo '<hr/>';
+                    var_dump($employee['schedule']);
+                    echo '<hr/>';
+                    var_dump($employee['schedule']);
+                    echo '<hr/>';
+
                     return false;
                 }
             }

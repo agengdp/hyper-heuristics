@@ -1,9 +1,9 @@
 <?php
 
 include 'Generate.php';
-$schedule = new Generate(2020, 11, 'data/igd.txt');
+$schedule = new Generate(2020, 11, 'data/asoka.txt');
 $schedule->initalize();
-// $schedule->reinforcementLearning(1000);
+ $schedule->reinforcementLearning(1000);
 // $schedule->hillClimbing(1000);
 
 $schedules = $schedule->cells;
@@ -31,9 +31,6 @@ JFI: <?= $schedules['jfi'] ?>
             <?php $day = 0; foreach($schedules['data'][0]['schedules'] as $schedule): $day++ ?>
                 <th><?=$day?></th>
             <?php endforeach; ?>
-            <th>
-                Total
-            </th>
         </tr>
     </thead>
     <tbody>
@@ -46,15 +43,7 @@ JFI: <?= $schedules['jfi'] ?>
                     <?= $schedule['jabatan']; ?><br>
                     <?= $schedule['spesialisasi']; ?><br>
                 </td>
-                <?php $total = [
-                    'P' => 0,
-                    'S' => 0,
-                    'M' => 0,
-                    'L' => 0
-                ];?>
                 <?php foreach($schedule['schedules'] as $k => $value): ?>
-
-                <?php $total[$value['schedule']]++;?>
 
                     <?php 
                         $bg = '#0FF';
@@ -69,12 +58,6 @@ JFI: <?= $schedules['jfi'] ?>
                     
                     <td style="text-align: center;background:<?= $bg ?>"><?= $value['schedule']; ?></td>
                 <?php endforeach; ?>
-                <td>
-                    P=<?= $total['P'] ?><br/>
-                    S=<?= $total['S'] ?><br/>
-                    M=<?= $total['M'] ?><br/>
-                    L=<?= $total['L'] ?><br/>
-                </td>
             </tr>
         <?php endforeach; ?>
     </tbody>
