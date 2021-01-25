@@ -35,7 +35,7 @@ class Generate{
      * 
      * @var array
      */
-    public $shifts = ['P', 'S', 'M', 'L'];
+    public $shifts = ['L', 'P', 'S', 'M'];
 
 
     /**
@@ -119,7 +119,7 @@ class Generate{
 
         $this->cells = $this->solve($this->cells);
 
-        $this->mapByEmployee();
+        $this->mapByEmployee($this->cells);
         $this->countJFI();
 
         return $this;
@@ -301,32 +301,55 @@ class Generate{
 
     }
 
+    /**
+     * Rows constraint
+     *
+     * @param array $cells
+     * @return void
+     */
     private function rowsGood($cells){
+        
         foreach($cells as $tgl => $employees){
 
             foreach($employees as $empKey => $employee){
-
+                if(
+                    $this->liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee) &&
+                    // $this->semingguHarusMasukSemuaShift($cells, $empKey, $tgl, $employee) &&
+                    $this->jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $tgl, $employee) &&
+                    $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
+                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
+                    $this->karuConstraint($tgl, $employee)
+                ){
+    
+                }else{
+                    return false;
+                }
+    
             }
-
+            
         }
 
         return true;
     }
 
+    /**
+     * Columns constraint
+     *
+     * @param array $cells
+     * @return void
+     */
     private function columnsGood($cells){
+
         foreach($cells as $tgl => $employees){
 
             foreach($employees as $empKey => $employee){
 
                 if(
-
-                    $this->karuConstraint($tgl, $employee) && 
-                    $this->liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee) &&
-                    $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
-                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
-                    $this->shiftHarusMaxTigaPuluhPersenMasuk($cells, $tgl, $employee) &&
-                    $this->jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $employee) &&
-                    $this->shiftHarusAdaYangJaga($cells, $tgl, $employee)
+                    // $this->shiftLibur($cells, $tgl, $employee) &&
+                    // $this->shiftSiang($cells, $tgl, $employee) &&
+                    // $this->shiftHarusMaxTigaPuluhPersenMasuk($cells, $tgl, $employee) &&
+                    $this->shiftSeniorHarusAdaYangJaga($cells, $tgl, $employee) &&
+                    $this->shiftPagi($cells, $tgl, $employee)                    
                 ){
                     
                 }else{
@@ -375,22 +398,26 @@ class Generate{
      * @return bool
      */
     private function liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee){
-
+        
         if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
             return true;
         }
 
-        if(!isset($cells[$tgl - 1])){
-            return true;
-        }
+        // if(!isset($cells[$tgl - 2])){
+        //     return true;
+        // }
 
-        if(
-            $cells[$tgl - 1][$empKey]['schedule'] === 'L' &&
-            $cells[$tgl - 1][$empKey]['schedule'] === $employee['schedule']
-        ){
+        if($employee['schedule'] === 'L'){
             return false;
         }
-        
+
+        // if(
+        //     $cells[$tgl - 2][$empKey]['schedule'] === $employee['schedule'] ||
+        //     $cells[$tgl - 1][$empKey]['schedule'] === $employee['schedule']
+        // ){
+        //     return false;
+        // }
+
         return true;
 
     }
@@ -451,6 +478,67 @@ class Generate{
 
     }
 
+    private function semingguHarusMasukSemuaShift($cells, $tgl, $empKey, $employee){
+        if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        if(!isset($cells[$tgl - 2])){
+            return true;
+        }
+       
+        $schedules = [];
+        for($i = 1; $i <= 3; $i++){
+            if(isset($cells[$tgl - $i])){
+
+                if($cells[$tgl - $i][$empKey]['schedule'] === 'L' && $employee['schedule'] === 'L'){
+                    return false;
+                }
+
+                $schedules[] = $cells[$tgl - $i][$empKey]['schedule'];
+            }
+        }
+
+        if(!empty($schedules)){
+            $filterJadwalNull = array_filter($schedules);
+            $totalJadwal = array_count_values($filterJadwalNull);
+            if(in_array($employee['schedule'], array_keys($totalJadwal))){
+                if($totalJadwal[$employee['schedule']] >= 3){
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Jumlah libur sesuai dengan jumlah hari minggu
+     *
+     * @param string $cells
+     * @return void
+     */
+    private function jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $tgl, $employee){
+
+        if($employee['schedule'] === null && $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        $empSchedule = [];
+        foreach($cells as $k => $v){
+            if($v[$empKey]['schedule'] !== null){
+                $empSchedule[] = $v[$empKey]['schedule'];
+            }
+        }
+
+        $schedule = array_count_values($empSchedule);
+        if(isset($schedule['L']) && $schedule['L'] > $this->countSunday()){
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * Tiap shift harus maksimal 30 masuk
      * 
@@ -477,9 +565,15 @@ class Generate{
             $hitungJadwalYgSama = array_count_values($filterJadwalNull);
 
             if(isset($hitungJadwalYgSama[$employee['schedule']])){
-                if($hitungJadwalYgSama[$employee['schedule']] > count($anggotas) * 30/100){
-                    return false;
-                }                        
+                if($employee['schedule'] !== 'L'){
+                    if($hitungJadwalYgSama[$employee['schedule']] > count($anggotas) * 30/100){
+                        return false;
+                    }    
+                }else{
+                    if($hitungJadwalYgSama[$employee['schedule']] > count($anggotas) * 10/100){
+                        return false;
+                    }                            
+                }
             }
 
         }
@@ -488,13 +582,103 @@ class Generate{
 
     }
 
+    private function shiftPagi($cells, $tgl, $employee){
+        $shift  = 4;
+
+        if($employee['schedule'] === null || $employee['schedule'] !== 'P' || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        $anggotas = array_filter($cells[$tgl], function($arr){
+            return $arr['employee']['jabatan'] !== 'karu';
+        });
+
+        $jadwalAnggota      = array_column($anggotas, 'schedule');
+
+        // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+        $filterJadwalNull = array_filter($jadwalAnggota);
+
+        if(!empty($filterJadwalNull)){
+
+            $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+            if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                if($hitungJadwalYgSama[$employee['schedule']] >= $shift){
+                    return false;
+                }
+            }
+
+        }
+
+        return true;
+    }
+
+    private function shiftSiang($cells, $tgl, $employee){
+        $shift  = 3;
+
+        if($employee['schedule'] === null || $employee['schedule'] !== 'S' || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        $anggotas = array_filter($cells[$tgl], function($arr){
+            return $arr['employee']['jabatan'] !== 'karu';
+        });
+
+        $jadwalAnggota      = array_column($anggotas, 'schedule');
+
+        // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+        $filterJadwalNull = array_filter($jadwalAnggota);
+
+        if(!empty($filterJadwalNull)){
+
+            $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+            if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                if($hitungJadwalYgSama[$employee['schedule']] >= $shift){
+                    return false;
+                }
+            }
+
+        }
+
+        return true;
+    }
+
+    private function shiftMalam($cells, $tgl, $employee){
+        $shift  = 3;
+
+        if($employee['schedule'] === null || $employee['schedule'] !== 'M' || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        $anggotas = array_filter($cells[$tgl], function($arr){
+            return $arr['employee']['jabatan'] !== 'karu';
+        });
+
+        $jadwalAnggota      = array_column($anggotas, 'schedule');
+
+        // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+        $filterJadwalNull = array_filter($jadwalAnggota);
+
+        if(!empty($filterJadwalNull)){
+
+            $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+            if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                if($hitungJadwalYgSama[$employee['schedule']] >= $shift){
+                    return false;
+                }
+            }
+
+        }
+
+        return true;
+    }
+
     /**
      * Shift harus ada yang jaga
      *
      * @param array $cells
      * @return void
      */
-    private function shiftHarusAdaYangJaga($cells, $tgl, $employee){
+    private function shiftSeniorHarusAdaYangJaga($cells, $tgl, $employee){
 
         if($employee['schedule'] == null || $employee['employee']['jabatan'] !== 'senior'){
             return true;
@@ -506,7 +690,6 @@ class Generate{
 
         $jadwalAnggota      = array_column($anggotas, 'schedule');
 
-        // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
         $filterJadwalNull = array_filter($jadwalAnggota);
 
         if(!empty($filterJadwalNull)){
@@ -514,42 +697,16 @@ class Generate{
             $hitungJadwalYgSama = array_count_values($filterJadwalNull);
 
             if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                
                 if($hitungJadwalYgSama[$employee['schedule']] > 2){ // entahlah @todo Kalo dibawah 2 not working
                     return false;
-                }                        
+                }
             }
 
         }
 
         return true;
 
-    }
-
-    /**
-     * Jumlah libur sesuai dengan jumlah hari minggu
-     *
-     * @param string $cells
-     * @return void
-     */
-    private function jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $employee){
-
-        if($employee['schedule'] === null && $employee['employee']['jabatan'] === 'karu'){
-            return true;
-        }
-
-        $empSchedule = [];
-        foreach($cells as $k => $v){
-            if($v[$empKey]['schedule'] !== null){
-                $empSchedule[] = $v[$empKey]['schedule'];
-            }
-        }
-
-        $schedule = array_count_values($empSchedule);
-        if(isset($schedule['L']) && $schedule['L'] > $this->countSunday()){
-            return false;
-        }
-
-        return true;
     }
 
 
@@ -759,14 +916,14 @@ class Generate{
      *
      * @return void
      */
-    private function mapByEmployee(){
+    private function mapByEmployee($cellsx){
         $cells      = [];
         $schedule   = [];
 
-        foreach($this->cells as $y => $columns){
+        foreach($cellsx as $y => $columns){
             foreach($columns as $x => $row){
                 $cells[$x]              = $row['employee'];
-                foreach($this->cells as $k => $r){
+                foreach($cellsx as $k => $r){
                     $cells[$x]['schedules'][] = [
                         'schedule'      => $r[$x]['schedule']
                     ];
@@ -775,6 +932,7 @@ class Generate{
         }
 
         $this->cells['data'] = $cells;
+        return $cells;
     }
 
     /**
