@@ -35,8 +35,9 @@ class Generate{
      * 
      * @var array
      */
-    public $shifts = ['L', 'P', 'S', 'M'];
+    public $shifts = ['P', 'S', 'M', 'L'];
 
+    private $countSunday;
 
     /**
      * Contructor
@@ -55,6 +56,7 @@ class Generate{
         $this->month        = $month;
         $this->employees    = $this->formatEmployee($employeeFile);
         $this->cells        = $this->generateCells();
+        $this->countSunday  = $this->countSunday();
 
         return $this;
 
@@ -308,16 +310,16 @@ class Generate{
      * @return void
      */
     private function rowsGood($cells){
-        
+
         foreach($cells as $tgl => $employees){
 
             foreach($employees as $empKey => $employee){
                 if(
-                    $this->liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee) &&
-                    // $this->semingguHarusMasukSemuaShift($cells, $empKey, $tgl, $employee) &&
-                    $this->jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $tgl, $employee) &&
+//                    $this->liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee) &&
+                      $this->formatMML($tgl, $empKey, $employee) &&
+//                    $this->jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee) &&
                     $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
-                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
+//                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
                     $this->karuConstraint($tgl, $employee)
                 ){
     
@@ -339,6 +341,8 @@ class Generate{
      * @return void
      */
     private function columnsGood($cells){
+
+        return true;
 
         foreach($cells as $tgl => $employees){
 
@@ -399,24 +403,19 @@ class Generate{
      */
     private function liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee){
         
-        if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
+        if($employee['schedule'] !== 'L' || $employee['employee']['jabatan'] === 'karu'){
             return true;
         }
 
-        // if(!isset($cells[$tgl - 2])){
-        //     return true;
-        // }
+         if(!isset($cells[$tgl - 1])){
+             return true;
+         }
 
-        if($employee['schedule'] === 'L'){
-            return false;
-        }
-
-        // if(
-        //     $cells[$tgl - 2][$empKey]['schedule'] === $employee['schedule'] ||
-        //     $cells[$tgl - 1][$empKey]['schedule'] === $employee['schedule']
-        // ){
-        //     return false;
-        // }
+         if(
+             $cells[$tgl - 1][$empKey]['schedule'] === $employee['schedule']
+         ){
+             return false;
+         }
 
         return true;
 
@@ -478,39 +477,30 @@ class Generate{
 
     }
 
-    private function semingguHarusMasukSemuaShift($cells, $tgl, $empKey, $employee){
+    private function formatMML($tgl, $empKey, $employee){
         if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
             return true;
         }
 
-        if(!isset($cells[$tgl - 2])){
-            return true;
-        }
-       
-        $schedules = [];
-        for($i = 1; $i <= 3; $i++){
-            if(isset($cells[$tgl - $i])){
+        $dayCount   = date('t', strtotime($this->month . '/1/' . $this->year));
+        $jmlMinggu  = $this->countSunday;
+        $jarakHari  = $dayCount / $jmlMinggu;
 
-                if($cells[$tgl - $i][$empKey]['schedule'] === 'L' && $employee['schedule'] === 'L'){
-                    return false;
-                }
+        $tgll = $empKey+1+$tgl;
 
-                $schedules[] = $cells[$tgl - $i][$empKey]['schedule'];
+        if($tgll % $jarakHari === 4 || $tgll % $jarakHari === 5){
+            if($employee['schedule'] !== 'M'){
+                return false;
             }
-        }
-
-        if(!empty($schedules)){
-            $filterJadwalNull = array_filter($schedules);
-            $totalJadwal = array_count_values($filterJadwalNull);
-            if(in_array($employee['schedule'], array_keys($totalJadwal))){
-                if($totalJadwal[$employee['schedule']] >= 3){
-                    return false;
-                }
+        }elseif($tgll % $jarakHari === 0){
+            if($employee['schedule'] !== 'L'){
+                return false;
             }
         }
 
         return true;
     }
+
 
     /**
      * Jumlah libur sesuai dengan jumlah hari minggu
@@ -518,7 +508,7 @@ class Generate{
      * @param string $cells
      * @return void
      */
-    private function jumlahLiburSesuaiJumlahMinggu($cells, $empKey, $tgl, $employee){
+    private function jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee){
 
         if($employee['schedule'] === null && $employee['employee']['jabatan'] === 'karu'){
             return true;
