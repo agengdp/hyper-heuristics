@@ -1,13 +1,13 @@
 <?php
 
 include 'Generate.php';
-$schedule = new Generate(2020, 11, 'igd.txt');
+$schedule = new Generate(2020, 12, 'igd.txt');
 $schedule->initalize();
 // $schedule->reinforcementLearning(1000);
 // $schedule->hillClimbing(1000);
 
 $schedules = $schedule->cells;
-
+//633016
 
 ?>
 
@@ -37,7 +37,10 @@ JFI: <?= $schedules['jfi'] ?>
         </tr>
     </thead>
     <tbody>
-        
+
+        <?php
+            $totalColumn = [];
+        ?>
         <?php foreach($schedules['data'] as $key => $schedule): ?>
             <tr>
                 <td><?= $key ?></td>
@@ -53,9 +56,10 @@ JFI: <?= $schedules['jfi'] ?>
                     'L' => 0
                 ];?>
                 <?php foreach($schedule['schedules'] as $k => $value): ?>
-
+                <?php
+                    $totalColumn[$k][$value['schedule']]++;
+                ?>
                 <?php $total[$value['schedule']]++;?>
-
                     <?php 
                         $bg = '#0FF';
                         if($value['schedule'] == 'P'){
@@ -66,7 +70,6 @@ JFI: <?= $schedules['jfi'] ?>
                             $bg = '#0F0';
                         }
                     ?>
-                    
                     <td style="text-align: center;background:<?= $bg ?>"><?= $value['schedule']; ?></td>
                 <?php endforeach; ?>
                 <td>
@@ -77,5 +80,17 @@ JFI: <?= $schedules['jfi'] ?>
                 </td>
             </tr>
         <?php endforeach; ?>
+            <tr>
+                <td colspan="2" style="text-align: center">Total</td>
+                <?php foreach($schedules['data'][0]['schedules'] as $key => $schedule): ?>
+                    <td>
+                        P: <?= $totalColumn[$key]['P'] ?><br/>
+                        S: <?= $totalColumn[$key]['S'] ?><br/>
+                        M: <?= $totalColumn[$key]['M'] ?><br/>
+                        L: <?= $totalColumn[$key]['L'] ?>
+                    </td>
+                <?php endforeach; ?>
+                <td></td>
+            </tr>
     </tbody>
 </table>

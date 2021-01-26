@@ -1,16 +1,16 @@
-Maria Dwi Isnaini;karu;general
-Kholisah;senior;general
-Andriyan Eka L;senior;general
-Sholikhah;senior;general
-Dian Mustiko R;senior;general
-Izzudin Alqosam;senior;general
-Diah Ayu R;anggota;general
-Novia Widyawati;anggota;general
-Anggi Aristy;anggota;general
-Ratna Yunita;anggota;general
-Nina Ulfiah;anggota;general
-Nur Aidha Aprilia M;anggota;general
-Fera Puji Ratnawati;anggota;general
-Ike Widayanti;anggota;general
-Zainul Ashar;anggota;general
-Agung Wijaya;anggota;general
+ASOKA-01;karu;general
+ASOKA-02;senior;general
+ASOKA-03;senior;general
+ASOKA-04;senior;general
+ASOKA-05;senior;general
+ASOKA-06;senior;general
+ASOKA-07;anggota;general
+ASOKA-08;anggota;general
+ASOKA-09;anggota;general
+ASOKA-10;anggota;general
+ASOKA-11;anggota;general
+ASOKA-07;anggota;general
+ASOKA-08;anggota;general
+ASOKA-09;anggota;general
+ASOKA-10;anggota;general
+ASOKA-11;anggota;general
