@@ -1,0 +1,11 @@
+TERATAI-01;karu;general
+TERATAI-02;senior;general
+TERATAI-03;senior;general
+TERATAI-04;senior;general
+TERATAI-05;senior;general
+TERATAI-06;senior;general
+TERATAI-07;anggota;general
+TERATAI-08;anggota;general
+TERATAI-09;anggota;general
+TERATAI-10;anggota;general
+TERATAI-11;anggota;general

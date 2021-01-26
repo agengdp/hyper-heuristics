@@ -1,0 +1,14 @@
+ICU-01;karu;general
+ICU-02;senior;general
+ICU-03;anggota;general
+ICU-04;anggota;general
+ICU-05;senior;general
+ICU-06;anggota;general
+ICU-07;anggota;general
+ICU-08;senior;general
+ICU-09;anggota;general
+ICU-10;anggota;general
+ICU-11;senior;general
+ICU-12;anggota;general
+ICU-13;anggota;general
+ICU-14;senior;general
