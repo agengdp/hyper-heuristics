@@ -30,17 +30,25 @@ class Generate{
      */
     public $cells;
 
+    /**
+     * Shift
+     *
+     * @var array
+     */
+    public $shifts = ['P', 'S', 'M', 'L'];
+
+    private $countSunday;
 
     /**
      * Contructor
      *
      * @param string $year
      * @param string $month
-     * @param array $employeeFile
+     * @param string $employeeFile
      */
     public function __construct(
-        $year, 
-        $month, 
+        $year,
+        $month,
         $employeeFile
     ){
 
@@ -48,6 +56,7 @@ class Generate{
         $this->month        = $month;
         $this->employees    = $this->formatEmployee($employeeFile);
         $this->cells        = $this->generateCells();
+        $this->countSunday  = $this->countSunday();
 
         return $this;
 
@@ -56,7 +65,7 @@ class Generate{
     /**
      * Format employee as desired
      *
-     * @return void
+     * @return array
      */
     private function formatEmployee($employee){
         $employees = fopen($employee, "r");
@@ -76,26 +85,25 @@ class Generate{
         }
         fclose($employees);
 
-        return $this->employees = $emp;        
+        return $this->employees = $emp;
     }
 
     /**
      * Generate cells
      *
-     * @return void
+     * @return array
      */
     private function generateCells(){
         $dayCount = date('t', strtotime($this->month . '/1/' . $this->year));
-        
+
         $cells = [];
 
         for($x = 0; $x < $dayCount; $x++){
-            
+
             for($y = 0; $y < count($this->employees); $y++){
                 $cells[$x][$y] = [
                     'employee'      => $this->employees[$y],
                     'schedule'      => null,
-                    'bobot'           => 0
                 ];
             }
         }
@@ -106,14 +114,14 @@ class Generate{
 
     /**
      * Initialize script
-     * 
+     *
      * @return self
      */
     public function initalize(){
 
         $this->cells = $this->solve($this->cells);
-        $this->mapByEmployee();
-        // $this->validateLibur();
+
+        $this->mapByEmployee($this->cells);
         $this->countJFI();
 
         return $this;
@@ -161,25 +169,155 @@ class Generate{
 
     /**
      * Solve program
-     * @param  array $cells 
-     * @return void
+     * @param  array $cells
+     * @return array
      */
     private function solve($cells){
-        
-        if($this->schedulePopulated($cells)){
+
+        if($this->solved($cells)){
             return $cells;
         }
 
-        return $this->populateSchedule($cells);
+        $possibilities  = $this->nextCells($cells);
+        $validCells     = $this->keepOnlyValid($possibilities);
+
+        if(empty($validCells)){
+            return $this->rollback($cells);
+        }
+
+        return $this->searchForSolution($validCells);
+    }
+
+    /**
+     * Populate schedule
+     *
+     * @param  array $cells
+     * @return mixed
+     */
+    private function searchForSolution($cells){
+
+        if(count($cells) < 1){
+            echo 'Tidak ada solusi';
+            die();
+        }
+
+//        $first = array_shift($cells);
+        $first = $cells[array_rand($cells)];
+        $tryPath = $this->solve($first);
+
+        if($tryPath !== false){
+            return $tryPath;
+        }
+
+        return $this->searchForSolution($cells);
+    }
+
+    /**
+     * Rollback cells jika tidak ketemu solusi
+     *
+     * @param $cells
+     * @return array|mixed
+     */
+    private function rollback($cells){
+        $firstEmpty = $this->findEmpty($cells);
+
+        if($firstEmpty !== null){
+            $x = $firstEmpty[0];
+            $y = $firstEmpty[1];
+
+//            var_dump('enter rollback');
+//            echo '<br/>';
+//
+            if($x === 1 && $y === 0){
+                echo 'Karu di ignore';
+                die();
+            }
+
+            $locSebelumEmpty = [$x, $y - 1];
+            if($y === 0){
+                $locSebelumEmpty = [$x - 1, count($cells) - 1];
+            }
+
+//            var_dump($firstEmpty);
+//            echo '<br/>';
+//            var_dump($y);
+//            echo '<br/>';
+//            var_dump($locSebelumEmpty);
+//            echo '<hr/>';
+//            var_dump(count($cells));
+//            echo '<hr/>';
+
+            $previousValue = $cells[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule'];
+            $cells[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule'] = null;
+
+            $possibilities = $this->nextCells($cells);
+            $validCells = $this->keepOnlyValid($possibilities);
+
+            if(empty($validCells)){
+                return $this->rollback($cells);
+            }
+            $validatedCells = $this->validateRollback($validCells, $previousValue, $locSebelumEmpty);
+
+            if(empty($validatedCells)){
+                return $this->rollback($cells);
+            }
+
+            return $this->searchForSolution($validatedCells);
+        }
+    }
+
+    /**
+     * Rolled back list,
+     * jadi jawaban yang sudah di rollback ditaruh disini
+     * Jika nanti muncul solusi ditempat tersebut tapi sudah dicoba
+     * maka akan naik 1
+     *
+     * @var array
+     */
+    private $rolledBack = [];
+
+    /**
+     * Validasi rollback
+     *
+     * @param $cells
+     * @param $prevValue
+     * @param $locSebelumEmpty
+     * @return array
+     */
+    private function validateRollback($cells, $prevValue, $locSebelumEmpty){
+        $res = [];
+
+        foreach($cells as $cell){
+//            var_dump($prevValue);
+//            echo '<br/>';
+//            var_dump($cell[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule']);
+//            echo '<br/>';
+
+            if(isset($this->rolledBack[$locSebelumEmpty[0]][$locSebelumEmpty[1]]) && in_array($prevValue, $this->rolledBack[$locSebelumEmpty[0]][$locSebelumEmpty[1]])){
+//                var_dump($this->rolledBack[$locSebelumEmpty[0]][$locSebelumEmpty[1]]);
+//                echo '<hr/>';
+                continue;
+            }
+
+//            echo '<hr/>';
+            if(
+                $cell[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule'] !== $prevValue
+            ){
+                $this->rolledBack[$locSebelumEmpty[0]][$locSebelumEmpty[1]][] = $prevValue;
+                $res[] = $cell;
+            }
+        }
+
+        return $res;
     }
 
     /**
      * Cek jadwal apakah sudah populated apa belum
-     * 
-     * @param  array $cells 
-     * @return bool
+     *
+     * @param array $cells
+     * @return boolean
      */
-    private function schedulePopulated($cells){
+    private function solved(array $cells){
 
         foreach($cells as $values){
 
@@ -195,246 +333,536 @@ class Generate{
     }
 
     /**
-     * Populate schedule
-     * 
-     * @param  array $cells 
-     * @return recursion
+     * Create new cells and add assigned answer
+     * @param array $cells
+     * @return array
      */
-    private function populateSchedule($cells){
+    private function nextCells(array $cells){
 
-        foreach($cells as $column => $values){
+        $res = [];
+        $firstEmpty = $this->findEmpty($cells);
 
-            foreach($values as $row => $value){
-                if($value['schedule'] !== null){
-                    continue;
-                }
+        if($firstEmpty !== null){
 
-                $answer = $this->selectAnswer($cells, $column, $row);
+            $x = $firstEmpty[0];
+            $y = $firstEmpty[1];
 
-                if($answer !== false){
-                    $cells[$column][$row]['schedule']   = $answer['schedule'];
-                }
+            foreach($this->shifts as $shift){
+
+                $cells[$x][$y]['schedule'] = $shift;
+                $res[] = $cells;
             }
 
         }
 
-        return $this->solve($cells);
+        return $res;
+
     }
 
     /**
-     * Pilih jawaban
-     * @param  array $cells  seluruh scells
-     * @param  int $column kolom (dalam hal ini tanggal)
-     * @param  int $row    baris (dalam hal ini key dari employee)
-     * @return string
+     * Find empty cells
+     * @param array $cells
+     * @return mixed
      */
-    private function selectAnswer($cells, $column, $row){
+    private function findEmpty(array $cells){
 
-        $shift = ['P', 'M', 'S', 'L'];
+        for($x = 0; $x < count($this->cells); $x++){
+            for($y = 0; $y < count($this->employees); $y++){
 
-        $date = $column+1;
+                if($cells[$x][$y]['schedule'] === null){
+                    return [$x, $y];
+                }
+            }
+        }
 
-        // Cek apakah ini hari minggu
-        $isSunday = date('w', strtotime($this->month . '/' . $date . '/' . $this->year)) == 0 ? true : false;
+        return false;
+    }
 
-        // constraint Karu
-        if($cells[$column][$row]['employee']['jabatan'] === 'karu'){
+    /**
+     * Keep valid answer
+     *
+     * @param $cells
+     * @return array
+     */
+    private function keepOnlyValid($cells){
 
-            if($isSunday){
-                return [
-                    'schedule'      => $shift[3]
-                ];
+        $res = [];
+
+        for($x = 0; $x < count($cells); $x++){
+            if($this->validCells($cells[$x])){
+                $res[] = $cells[$x];
+            }
+        }
+
+        return $res;
+    }
+
+    /**
+     * Cek apakah cells valid
+     * @param  array $cells
+     * @return boolean
+     */
+    private function validCells($cells){
+
+        return $this->rowsGood($cells) && $this->columnsGood($cells);
+
+    }
+
+    /**
+     * Rows constraint
+     *
+     * @param array $cells
+     * @return boolean
+     */
+    private function rowsGood($cells){
+
+        foreach($cells as $tgl => $employees){
+
+            foreach($employees as $empKey => $employee){
+                if(
+                    $this->liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee) &&
+//                    $this->formatMML($tgl, $empKey, $employee) &&
+                    $this->jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee) &&
+                    $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
+                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
+                    $this->karuConstraint($tgl, $employee)
+                ){
+
+                }else{
+                    return false;
+                }
+
             }
 
-            return [
-                'schedule'      => $shift[0]
-            ];
         }
 
+        return true;
+    }
 
-        // Global constraint
+    /**
+     * Columns constraint
+     *
+     * @param array $cells
+     * @return boolean
+     */
+    private function columnsGood($cells){
 
-        // Unset Shift Pagi, biar gabisa abis masuk malam terus masuk pagi
-        if(isset($cells[$column - 1][$row]['schedule']) && $cells[$column - 1][$row]['schedule'] !== 'S'){
-            unset($shift[0]);
+        foreach($cells as $tgl => $employees){
+
+            foreach($employees as $empKey => $employee){
+
+                if(
+                    // $this->shiftLibur($cells, $tgl, $employee) &&
+//                     $this->shiftSiang($cells, $tgl, $employee)
+                    $this->shiftHarusMaxTigaPuluhPersenMasuk($cells, $tgl, $employee) &&
+                    $this->shiftSeniorHarusAdaYangJaga($cells, $tgl, $empKey, $employee)
+//                    $this->shiftPagi($cells, $tgl, $employee)
+                ){
+
+                }else{
+                    return false;
+                }
+            }
+
         }
 
-        // Pattern MML
+        return true;
 
+    }
 
+    /**
+     * Karu constraint
+     * libur tiap hari minggu dan tiap hari Pagi
+     *
+     * @param $tglKey
+     * @param $employee
+     * @return bool
+     */
+    private function karuConstraint($tglKey, $employee){
 
-        // 6X masuk 1x libur
-        // Jika 6 hari sebelumnya libur, maka hari ini libur
-        // if(isset($cells[$column - 7][$row]['schedule']) && $cells[$column - 7][$row]['schedule'] === 'L'){
-            
-        //     $day = date('w', strtotime($this->month . '/' . $date . '/' . $this->year));
+        if($employee['schedule'] === null){
+            return true;
+        }
+
+        if($employee['employee']['jabatan'] === 'karu'){
+
+            $date       = $tglKey+1;
+            $isSunday   = date('w', strtotime($this->month . '/' . $date . '/' . $this->year)) == 0 ? true : false;
+
+            if($isSunday && $employee['schedule'] !== 'L'){
+                return false;
+            }elseif(!$isSunday && $employee['schedule'] !== 'P'){
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Libur tidak boleh gandeng 2x atau lebih
+     *
+     * @param $cells
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
+     * @return bool
+     */
+    private function liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee){
+
+        if($employee['schedule'] !== 'L' || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+         if(!isset($cells[$tgl - 1])){
+             return true;
+         }
+
+         if(
+             $cells[$tgl - 1][$empKey]['schedule'] === $employee['schedule']
+         ){
+             return false;
+         }
+
+        return true;
+
+    }
+
+    /**
+     * Shift tidak boleh gandeng 3 kali
+     * MMM, LLL, SSS
+     *
+     * @param $cells
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
+     * @return bool
+     */
+    private function shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee){
+
+        if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        if(!isset($cells[$tgl - 2])){
+            return true;
+        }
+
+        if(
+            $cells[$tgl - 2][$empKey]['schedule'] === $cells[$tgl - 1][$empKey]['schedule'] &&
+            $cells[$tgl - 1][$empKey]['schedule'] === $employee['schedule']
+        ){
+            return false;
+        }
+
+        return true;
+
+    }
+
+    /**
+     * Shift tidak boleh dari malam ke pagi
+     * M -> P
+     *
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
+     * @return bool
+     */
+    private function shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee){
+
+        if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        if(!isset($cells[$tgl - 1])){
+            return true;
+        }
+
+        if(
+            $cells[$tgl - 1][$empKey]['schedule'] === 'M' &&
+            $employee['schedule']        === 'P'
+        ){
+            return false;
+        }
+
+        return true;
+
+    }
+
+    private function formatMML($tgl, $empKey, $employee){
+        if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        $dayCount   = date('t', strtotime($this->month . '/1/' . $this->year));
+        $jmlMinggu  = $this->countSunday;
+        $jarakHari  = $dayCount / $jmlMinggu;
+
+        $tgll = $empKey+1+$tgl;
+
+        if($tgll % $jarakHari === 4 || $tgll % $jarakHari === 5){
+            if($employee['schedule'] !== 'M'){
+                return false;
+            }
+        }elseif($tgll % $jarakHari === 0){
+            if($employee['schedule'] !== 'L'){
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Global libur state per row
+     *
+     * @var array
+     */
+    private $libur;
+
+    /**
+     * Jumlah libur sesuai dengan jumlah hari minggu
+     *
+     * @param $cells
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
+     * @return bool
+     */
+    private function jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee){
         
-        //     return [
-        //         'schedule'      => $shift[3],
-        //     ];
-        // }
-
-        // Libur tidak boleh lebih dari jumlah hari minggu
-        $sunday =  $this->countSunday();
-        $libur = 0;
-        for($i = 0; $i < count($cells); $i++) {
-            if($cells[$i][$row]['schedule'] == 'L'){
-                $libur +=1;
-            }           
-        }
-        if($libur >= $sunday){
-            unset($shift[3]);
+        if(!isset($employee['employee'])){
+            var_dump($cells);
+            die();
         }
 
-        // Gaboleh libur gandeng dalam jangka waktu 6 hari
-        for($i = 0; $i < 7; $i++){
-            if(isset($cells[$column - $i][$row]['schedule']) && $cells[$column - $i][$row]['schedule'] === 'L'){
-                unset($shift[3]);
+        if(
+            $employee['schedule'] !== null ||
+            $employee['employee']['jabatan'] === 'karu'
+        ){
+            return true;
+        }
+
+        $empSchedule = [];
+        foreach($cells as $k => $v){
+            if(isset($v[$empKey]['schedule']) && $v[$empKey]['schedule'] !== null){
+                $empSchedule[] = $v[$empKey]['schedule'];
             }
         }
 
-        // Pattern tidak boleh 3x
-        $prev1      = '';
-        $prev2      = '';
-        $prevValue  = '';
-        if(isset($cells[$column - 1][$row]['schedule'])){
-            $prev1 = $cells[$column - 1][$row]['schedule'];
-        }
+        if(!empty($empSchedule)){
+            $schedule = array_count_values($empSchedule);
+            if(isset($schedule['L']) && $schedule['L'] > $this->countSunday){
+                $this->libur[$empKey] = true;
+                return false;
+            }
 
-        if(isset($cells[$column - 2][$row]['schedule'])){
-            $prev2 = $cells[$column - 2][$row]['schedule'];
-        }
-
-        if(!empty($prev1) && !empty($prev2) && $prev1 == $prev2){
-            $prevValue = $prev1;
-        }
-
-        if(!empty($prevValue)){
-            $findValueIndex = array_search($prevValue, $shift);
-            unset($shift[$findValueIndex]);
-        }
-
-        // Reset index shift after unset
-        $shift = array_values($shift);
-
-        // Mirroring shift
-        $answer = $shift;
-
-        // Senior Constraint
-        if($cells[$column][$row]['employee']['jabatan'] === 'senior'){
-
-            // Tiap shift harus ada yg masuk
-            // Filter senior only
-            $seniors = array_filter($cells[$column], function($arr){
-                return $arr['employee']['jabatan'] == 'senior';
-            });
-
-            $jadwalSenior = array_column($seniors, 'schedule');
-            $diff = array_diff($shift, array_unique($jadwalSenior));
-
-            if(!empty($diff)){
-                $answer = $diff;
+            if($tgl > 25){
+                return true;
             }
         }
 
-        // Anggota Constraint
-        if($cells[$column][$row]['employee']['jabatan'] === 'anggota'){
+        return true;
+    }
 
-            $unfilterAnswer = $answer;
+    /**
+     * Tiap shift harus maksimal 30 masuk
+     *
+     * @param $cells
+     * @param $tgl
+     * @param $employee
+     * @return bool
+     */
+    private function shiftHarusMaxTigaPuluhPersenMasuk($cells, $tgl, $employee){
 
-            // Tiap shift harus ada yg masuk
-            // Filter anggota only
-            $anggotas = array_filter($cells[$column], function($arr){
-                return $arr['employee']['jabatan'] == 'anggota';
-            });
+        if($employee['schedule'] === null || $employee['employee']['jabatan'] !== 'anggota'){
+            return true;
+        }
 
-            $jadwalAnggota      = array_column($anggotas, 'schedule');
+        $anggotas = array_filter($cells[$tgl], function($arr){
+            return $arr['employee']['jabatan'] == 'anggota';
+        });
 
-            // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
-            $filterJadwalNull = array_filter($jadwalAnggota);
-            
-            $persentase = count($anggotas) * 30/100;
+        $jadwalAnggota      = array_column($anggotas, 'schedule');
 
-            if(!empty($filterJadwalNull)){
-                $hitungJadwalYgSama = array_count_values($filterJadwalNull);
-                unset($hitungJadwalYgSama['L']);
-                
-                $filterAnswer = array_filter($hitungJadwalYgSama, function($v) use($persentase){
-                    return $v <= $persentase;
-                });
+        // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+        $filterJadwalNull = array_filter($jadwalAnggota);
 
-                $remapAnswer = [];
-                foreach($unfilterShift as $k => $v){
-                    if(( $key = array_search($v, $hitungJadwalYgSama)) !== false){
-                        if($hitungJadwalYgSama[$key] < $persentase){
-                            $remapAnswer[$k] = $v;
-                        }
+        if(!empty($filterJadwalNull)){
+
+            $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+
+            if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                if($employee['schedule'] !== 'L'){
+                    if($hitungJadwalYgSama[$employee['schedule']] > count($anggotas) * 30/100){
+                        return false;
+                    }
+                }else{
+                    if($hitungJadwalYgSama[$employee['schedule']] > count($anggotas) * 10/100){
+                        return false;
+                    }
+                }
+            }
+
+        }
+
+        return true;
+
+    }
+
+    private function shiftPagi($cells, $tgl, $employee){
+        $shift  = 10;
+
+        if($employee['schedule'] !== 'P' || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        $anggotas = array_filter($cells[$tgl], function($arr){
+            return $arr['employee']['jabatan'] !== 'karu';
+        });
+
+        $jadwalAnggota      = array_column($anggotas, 'schedule');
+        $filterJadwalNull = array_filter($jadwalAnggota);
+
+        if(!empty($filterJadwalNull)){
+
+            $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+            if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                if($hitungJadwalYgSama[$employee['schedule']] > $shift){
+                    return false;
+                }
+            }
+
+        }
+
+        return true;
+    }
+
+    private function shiftSiang($cells, $tgl, $employee){
+        $shift  = 10;
+
+        if($employee['schedule'] === null || $employee['schedule'] !== 'S' || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        $anggotas = array_filter($cells[$tgl], function($arr){
+            return $arr['employee']['jabatan'] !== 'karu';
+        });
+
+        $jadwalAnggota      = array_column($anggotas, 'schedule');
+
+        // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+        $filterJadwalNull = array_filter($jadwalAnggota);
+
+        if(!empty($filterJadwalNull)){
+
+            $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+            if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                if($hitungJadwalYgSama[$employee['schedule']] > $shift){
+                    return false;
+                }
+            }
+
+        }
+
+        return true;
+    }
+
+    private function shiftMalam($cells, $tgl, $employee){
+        $shift  = 3;
+
+        if($employee['schedule'] === null || $employee['schedule'] !== 'M' || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        $anggotas = array_filter($cells[$tgl], function($arr){
+            return $arr['employee']['jabatan'] !== 'karu';
+        });
+
+        $jadwalAnggota      = array_column($anggotas, 'schedule');
+
+        // Tiap shift anggota yang masuk bagi rata max 30% dari jumlah
+        $filterJadwalNull = array_filter($jadwalAnggota);
+
+        if(!empty($filterJadwalNull)){
+
+            $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+            if(isset($hitungJadwalYgSama[$employee['schedule']])){
+                if($hitungJadwalYgSama[$employee['schedule']] >= $shift){
+                    return false;
+                }
+            }
+
+        }
+
+        return true;
+    }
+
+    /**
+     * Shift harus ada yang jaga
+     *
+     * @param $cells
+     * @param $tgl
+     * @param $employee
+     * @return bool
+     */
+    private function shiftSeniorHarusAdaYangJaga($cells, $tgl, $empKey, $employee){
+
+        if(
+            $employee['schedule'] === null ||
+            $employee['schedule'] === 'L' ||
+            $employee['employee']['jabatan'] !== 'senior'
+        ){
+            return true;
+        }
+
+        $shifts = $this->shifts;
+
+        if(isset($this->libur[$empKey]) && $this->libur[$empKey] === TRUE){
+            unset($shifts[3]);
+        }
+
+        $anggotas = array_filter($cells[$tgl], function($arr){
+            return $arr['employee']['jabatan'] === 'senior';
+        });
+
+        $jadwalAnggota      = array_column($anggotas, 'schedule');
+        $filterJadwalNull   = array_filter($jadwalAnggota);
+
+        if(!empty($filterJadwalNull)){
+            $hitungJadwalYgSama = array_count_values($filterJadwalNull);
+
+            if(count($hitungJadwalYgSama) < count($this->shifts)){
+                $diff = array_diff($shifts, array_keys($hitungJadwalYgSama));
+
+                if(!empty($diff)){
+                    if(
+                        isset($hitungJadwalYgSama[$employee['schedule']]) &&
+                        $hitungJadwalYgSama[$employee['schedule']] > 1
+                    ){
+                        return false;
                     }
                 }
 
-                $answer = $remapAnswer;
-
-                // if(empty($filterAnswer)){
-                //     $answer = $unfilterAnswer;
-                // }else{
-                //     $remapAnswer = [];
-                //     foreach($filterAnswer as $jadwal => $jumlah){
-                //         if(( $key = array_search($jadwal, $answer)) !== false){
-                //             $remapAnswer[] = $answer;
-                //         }
-                //     }
-                //     $answer = $remapAnswer;
-    
-                // }
-    
             }
-
-            if(empty($answer)){
-                echo $row . ' - ' . $column;
-                echo '<hr />';
-                echo 'unfilter answer: ';
-                var_dump($unfilterAnswer);
-                echo '<hr/>';
-                echo 'hitungjadwal: ';
-                var_dump($hitungJadwalYgSama);
-                echo '<hr/>';
-                echo 'answer: ';
-                var_dump($answer);
-                echo '<hr/>';
-
-                $answer = $unfilterAnswer;
-            }
-
-            // Tiap shift harus ada yg masuk
-            $diff = array_diff($shift, array_unique($jadwalAnggota));
-                
-            if(!empty($diff)){
-                $answer = $diff;
-            }
-    
         }
 
-        $result = $shift[array_rand($answer)];
-
-        return [
-            'schedule'      => $result
-        ];
-
+        return true;
     }
 
     /**
      * Map cells by Employee
      *
-     * @return void
+     * @param $cellsx
+     * @return array
      */
-    private function mapByEmployee(){
+    private function mapByEmployee($cellsx){
         $cells      = [];
-        $schedule   = [];
 
-        foreach($this->cells as $y => $columns){
+        foreach($cellsx as $y => $columns){
             foreach($columns as $x => $row){
                 $cells[$x]              = $row['employee'];
-                foreach($this->cells as $k => $r){
+                foreach($cellsx as $k => $r){
                     $cells[$x]['schedules'][] = [
                         'schedule'      => $r[$x]['schedule']
                     ];
@@ -443,12 +871,13 @@ class Generate{
         }
 
         $this->cells['data'] = $cells;
+        return $cells;
     }
 
     /**
      * Hitung JFI
      *
-     * @return void
+     * @return float|int
      */
     private function countJFI(){
 
@@ -486,7 +915,7 @@ class Generate{
 
         $jmlSumEmpKuadrat = pow($jmlSumEmp, 2);
         $jfi = $jmlSumEmpKuadrat / (count($this->employees) * $jmlEmpKuadrat);
-        
+
         $this->cells['jfi'] = $jfi;
         return $jfi;
     }
@@ -494,7 +923,7 @@ class Generate{
     /**
      * Hitung jumlah minggu
      *
-     * @return void
+     * @return int
      */
     private function countSunday(){
 
@@ -508,13 +937,13 @@ class Generate{
             }
         }
         return $week;
-   
+
     }
 
     /**
      * Move
      *
-     * @return void
+     * @throws Exception
      */
     private function move(){
 
@@ -543,9 +972,10 @@ class Generate{
         }
     }
 
-     /**
+    /**
      * Swap
-     * @return void
+     *
+     * @throws Exception
      */
     private function swap(){
 
@@ -587,8 +1017,9 @@ class Generate{
     /**
      * Reinforcement Learning
      *
-     * @param int $iteration
-     * @return void
+     * @param $iteration
+     * @return array
+     * @throws Exception
      */
     public function reinforcementLearning($iteration){
         $lowLevels = ['move', 'swap'];
@@ -677,8 +1108,8 @@ class Generate{
     /**
      * Hill Climbing
      *
-     * @param int $iteration
-     * @return void
+     * @param $iteration
+     * @throws Exception
      */
     public function hillClimbing($iteration){
         $currentJFI = $bestJFI = $this->countJFI();
@@ -717,12 +1148,11 @@ class Generate{
      * @param integer $min
      * @param integer $max
      * @param integer $mul
-     * @return void
+     * @return int
      */
     private function f_rand($min=0,$max=1,$mul=1000000){
         if ($min>$max) return false;
         return mt_rand($min*$mul,$max*$mul)/$mul;
     }
-
 
 }

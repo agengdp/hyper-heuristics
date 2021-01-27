@@ -44,11 +44,11 @@ class Generate{
      *
      * @param string $year
      * @param string $month
-     * @param array $employeeFile
+     * @param string $employeeFile
      */
     public function __construct(
-        $year, 
-        $month, 
+        $year,
+        $month,
         $employeeFile
     ){
 
@@ -201,7 +201,8 @@ class Generate{
             die();
         }
 
-        $first = array_shift($cells);
+//        $first = array_shift($cells);
+        $first = $cells[array_rand($cells)];
         $tryPath = $this->solve($first);
 
         if($tryPath !== false){
@@ -213,7 +214,9 @@ class Generate{
 
     /**
      * Rollback cells jika tidak ketemu solusi
+     *
      * @param $cells
+     * @return array|mixed
      */
     private function rollback($cells){
         $firstEmpty = $this->findEmpty($cells);
@@ -222,15 +225,25 @@ class Generate{
             $x = $firstEmpty[0];
             $y = $firstEmpty[1];
 
-            if($x === 1 & $y === 0){
+            var_dump('enter rollback');
+            echo '<br/>';
+
+            if($x === 1 && $y === 0){
                 echo 'Karu di ignore';
                 die();
             }
 
-            $locSebelumEmpty = [];
+            $locSebelumEmpty = [$x, $y - 1];
             if($y === 0){
                 $locSebelumEmpty = [$x - 1, count($cells) - 1];
             }
+
+            var_dump($firstEmpty);
+            echo '<br/>';
+            var_dump($y);
+            echo '<br/>';
+            var_dump($locSebelumEmpty);
+            echo '<hr/>';
 
             $previousValue = $cells[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule'];
             $cells[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule'] = null;
@@ -243,7 +256,7 @@ class Generate{
             }
             $validatedCells = $this->validateRollback($validCells, $previousValue, $locSebelumEmpty);
 
-            if($validatedCells === false){
+            if(empty($validatedCells)){
                 return $this->rollback($cells);
             }
 
@@ -251,16 +264,33 @@ class Generate{
         }
     }
 
+    private $rolledBack = [];
+
     private function validateRollback($cells, $prevValue, $locSebelumEmpty){
         $res = [];
 
         foreach($cells as $cell){
-            if($cell[$locSebelumEmpty[0]][$locSebelumEmpty[1]] === $prevValue){
+            var_dump($prevValue);
+            echo '<br/>';
+            var_dump($cell[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule']);
+            echo '<br/>';
 
+            if(isset($this->rolledBack[$locSebelumEmpty[0]][$locSebelumEmpty[1]]) && in_array($prevValue, $this->rolledBack[$locSebelumEmpty[0]][$locSebelumEmpty[1]])){
+                var_dump($this->rolledBack[$locSebelumEmpty[0]][$locSebelumEmpty[1]]);
+                echo '<hr/>';
+                continue;
+            }
+
+            echo '<hr/>';
+            if(
+                $cell[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule'] !== $prevValue
+            ){
+                $this->rolledBack[$locSebelumEmpty[0]][$locSebelumEmpty[1]][] = $prevValue;
+                $res[] = $cell;
             }
         }
 
-        return res;
+        return $res;
     }
 
     /**
@@ -372,10 +402,10 @@ class Generate{
             foreach($employees as $empKey => $employee){
                 if(
                     $this->liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee) &&
-                    $this->formatMML($tgl, $empKey, $employee) &&
+//                    $this->formatMML($tgl, $empKey, $employee) &&
                     $this->jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee) &&
                     $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
-//                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
+                    $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
                     $this->karuConstraint($tgl, $employee)
                 ){
 
@@ -404,9 +434,9 @@ class Generate{
 
                 if(
                     // $this->shiftLibur($cells, $tgl, $employee) &&
-                     $this->shiftSiang($cells, $tgl, $employee)
+//                     $this->shiftSiang($cells, $tgl, $employee)
                     // $this->shiftHarusMaxTigaPuluhPersenMasuk($cells, $tgl, $employee) &&
-//                    $this->shiftSeniorHarusAdaYangJaga($cells, $tgl, $employee) &&
+                    $this->shiftSeniorHarusAdaYangJaga($cells, $tgl, $empKey, $employee)
 //                    $this->shiftPagi($cells, $tgl, $employee)
                 ){
 
@@ -424,9 +454,10 @@ class Generate{
     /**
      * Karu constraint
      * libur tiap hari minggu dan tiap hari Pagi
-     * 
-     * @param  array $cells
-     * @return boolean
+     *
+     * @param $tglKey
+     * @param $employee
+     * @return bool
      */
     private function karuConstraint($tglKey, $employee){
 
@@ -451,8 +482,11 @@ class Generate{
 
     /**
      * Libur tidak boleh gandeng 2x atau lebih
-     * 
-     * @param  array $cells 
+     *
+     * @param $cells
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
      * @return bool
      */
     private function liburTidakBolehGandengConstraint($cells, $tgl, $empKey, $employee){
@@ -478,8 +512,11 @@ class Generate{
     /**
      * Shift tidak boleh gandeng 3 kali
      * MMM, LLL, SSS
-     * 
-     * @param  array $cells 
+     *
+     * @param $cells
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
      * @return bool
      */
     private function shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee){
@@ -506,8 +543,10 @@ class Generate{
     /**
      * Shift tidak boleh dari malam ke pagi
      * M -> P
-     * 
-     * @param  array $cells 
+     *
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
      * @return bool
      */
     private function shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee){
@@ -556,28 +595,39 @@ class Generate{
     }
 
 
+    private $libur;
+
     /**
      * Jumlah libur sesuai dengan jumlah hari minggu
      *
-     * @param string $cells
-     * @return void
+     * @param $cells
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
+     * @return bool
      */
     private function jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee){
 
-        if($employee['schedule'] === null && $employee['employee']['jabatan'] === 'karu'){
+        if(
+            $employee['schedule'] === null ||
+            $employee['employee']['jabatan'] === 'karu'
+        ){
             return true;
         }
 
         $empSchedule = [];
         foreach($cells as $k => $v){
-            if($v[$empKey]['schedule'] !== null){
+            if(isset($v[$empKey]['schedule']) && $v[$empKey]['schedule'] !== null){
                 $empSchedule[] = $v[$empKey]['schedule'];
             }
         }
 
-        $schedule = array_count_values($empSchedule);
-        if(isset($schedule['L']) && $schedule['L'] > $this->countSunday()){
-            return false;
+        if(!empty($empSchedule)){
+            $schedule = array_count_values($empSchedule);
+            if(isset($schedule['L']) && $schedule['L'] > $this->countSunday()){
+                $this->libur[$empKey] = true;
+                return false;
+            }
         }
 
         return true;
@@ -722,10 +772,20 @@ class Generate{
      * @param $employee
      * @return bool
      */
-    private function shiftSeniorHarusAdaYangJaga($cells, $tgl, $employee){
+    private function shiftSeniorHarusAdaYangJaga($cells, $tgl, $empKey, $employee){
 
-        if($employee['schedule'] === null && $employee['schedule'] === 'L' || $employee['employee']['jabatan'] !== 'senior'){
+        if(
+            $employee['schedule'] === null ||
+            $employee['schedule'] === 'L' ||
+            $employee['employee']['jabatan'] !== 'senior'
+        ){
             return true;
+        }
+
+        $shifts = $this->shifts;
+
+        if(isset($this->libur[$empKey]) && $this->libur[$empKey] === TRUE){
+            unset($shifts[3]);
         }
 
         $anggotas = array_filter($cells[$tgl], function($arr){
@@ -733,15 +793,23 @@ class Generate{
         });
 
         $jadwalAnggota      = array_column($anggotas, 'schedule');
-        $filterJadwalNull = array_filter($jadwalAnggota);
+        $filterJadwalNull   = array_filter($jadwalAnggota);
 
         if(!empty($filterJadwalNull)){
             $hitungJadwalYgSama = array_count_values($filterJadwalNull);
 
-            if(isset($hitungJadwalYgSama[$employee['schedule']])){
-                if($hitungJadwalYgSama[$employee['schedule']] > 3){
-                    return false;
+            if(count($hitungJadwalYgSama) < count($this->shifts)){
+                $diff = array_diff($shifts, array_keys($hitungJadwalYgSama));
+
+                if(!empty($diff)){
+                    if(
+                        isset($hitungJadwalYgSama[$employee['schedule']]) &&
+                        $hitungJadwalYgSama[$employee['schedule']] > 1
+                    ){
+                        return false;
+                    }
                 }
+
             }
         }
 

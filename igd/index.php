@@ -57,6 +57,11 @@ JFI: <?= $schedules['jfi'] ?>
                 ];?>
                 <?php foreach($schedule['schedules'] as $k => $value): ?>
                 <?php
+
+                    if(!isset($totalColumn[$k][$value['schedule']])){
+                        $totalColumn[$k][$value['schedule']] = 0;
+                    };
+
                     $totalColumn[$k][$value['schedule']]++;
                 ?>
                 <?php $total[$value['schedule']]++;?>
@@ -84,10 +89,10 @@ JFI: <?= $schedules['jfi'] ?>
                 <td colspan="2" style="text-align: center">Total</td>
                 <?php foreach($schedules['data'][0]['schedules'] as $key => $schedule): ?>
                     <td>
-                        P: <?= $totalColumn[$key]['P'] ?><br/>
-                        S: <?= $totalColumn[$key]['S'] ?><br/>
-                        M: <?= $totalColumn[$key]['M'] ?><br/>
-                        L: <?= $totalColumn[$key]['L'] ?>
+                        P: <?= isset($totalColumn[$key]['P']) ? $totalColumn[$key]['P'] : '' ?><br/>
+                        S: <?= isset($totalColumn[$key]['S']) ? $totalColumn[$key]['S'] : ''?><br/>
+                        M: <?= isset($totalColumn[$key]['M']) ? $totalColumn[$key]['M'] : ''?><br/>
+                        L: <?= isset($totalColumn[$key]['L']) ? $totalColumn[$key]['L'] : '' ?>
                     </td>
                 <?php endforeach; ?>
                 <td></td>
