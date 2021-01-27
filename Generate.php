@@ -225,9 +225,9 @@ class Generate{
             $x = $firstEmpty[0];
             $y = $firstEmpty[1];
 
-//            var_dump('enter rollback');
-//            echo '<br/>';
-//
+            var_dump('enter rollback');
+            echo '<br/>';
+
             if($x === 1 && $y === 0){
                 echo 'Karu di ignore';
                 die();
@@ -235,17 +235,17 @@ class Generate{
 
             $locSebelumEmpty = [$x, $y - 1];
             if($y === 0){
-                $locSebelumEmpty = [$x - 1, count($cells) - 1];
+                $locSebelumEmpty = [$x - 1, count($cells[0]) - 1];
             }
 
-//            var_dump($firstEmpty);
-//            echo '<br/>';
-//            var_dump($y);
-//            echo '<br/>';
-//            var_dump($locSebelumEmpty);
-//            echo '<hr/>';
-//            var_dump(count($cells));
-//            echo '<hr/>';
+            var_dump($firstEmpty);
+            echo '<br/>';
+            var_dump($y);
+            echo '<br/>';
+            var_dump($locSebelumEmpty);
+            echo '<hr/>';
+            var_dump(count($cells));
+            echo '<hr/>';
 
             $previousValue = $cells[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule'];
             $cells[$locSebelumEmpty[0]][$locSebelumEmpty[1]]['schedule'] = null;
@@ -425,6 +425,7 @@ class Generate{
                     $this->jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee) &&
                     $this->shiftTidakBolehGandengTigaKaliConstraint($cells, $tgl, $empKey, $employee) &&
                     $this->shiftTidakBolehDariMalamKePagiConstraint($cells, $tgl, $empKey, $employee) &&
+                    $this->shiftTidakBolehDariMalamMalam($cells, $tgl, $empKey, $employee) &&
                     $this->karuConstraint($tgl, $employee)
                 ){
 
@@ -589,6 +590,36 @@ class Generate{
 
     }
 
+    /**
+     * Shift tidak boleh dari malam ke pagi
+     * M -> P
+     *
+     * @param $tgl
+     * @param $empKey
+     * @param $employee
+     * @return bool
+     */
+    private function shiftTidakBolehDariMalamMalam($cells, $tgl, $empKey, $employee){
+
+        if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
+            return true;
+        }
+
+        if(!isset($cells[$tgl - 1])){
+            return true;
+        }
+
+        if(
+            $cells[$tgl - 1][$empKey]['schedule'] === 'M' &&
+            $employee['schedule']        === 'M'
+        ){
+            return false;
+        }
+
+        return true;
+
+    }
+
     private function formatMML($tgl, $empKey, $employee){
         if($employee['schedule'] === null || $employee['employee']['jabatan'] === 'karu'){
             return true;
@@ -631,10 +662,10 @@ class Generate{
      */
     private function jumlahLiburSesuaiJumlahMinggu($cells, $tgl, $empKey, $employee){
         
-        if(!isset($employee['employee'])){
-            var_dump($cells);
-            die();
-        }
+//        if(!isset($employee['employee'])){
+//            var_dump($cells);
+//            die();
+//        }
 
         if(
             $employee['schedule'] !== null ||
@@ -652,14 +683,14 @@ class Generate{
 
         if(!empty($empSchedule)){
             $schedule = array_count_values($empSchedule);
-            if(isset($schedule['L']) && $schedule['L'] > $this->countSunday){
+            if(isset($schedule['L']) && $schedule['L'] >= $this->countSunday){
                 $this->libur[$empKey] = true;
                 return false;
             }
-
-            if($tgl > 25){
-                return true;
-            }
+//
+//            if($tgl > 25){
+//                return true;
+//            }
         }
 
         return true;
