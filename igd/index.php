@@ -1,6 +1,6 @@
 <?php
 
-include 'Generate.php';
+include 'Generate2.php';
 $schedule = new Generate(2020, 12, 'igd.txt');
 $schedule->initalize();
 // $schedule->reinforcementLearning(1000);

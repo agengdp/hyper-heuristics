@@ -1,9 +1,9 @@
 <?php
 
-include 'Generate.php';
+include 'Generate2.php';
 $schedule = new Generate(2020, 12, 'data/asoka.txt', 'asoka');
 $schedule->initalize();
-// $schedule->reinforcementLearning(1000);
+$schedule->reinforcementLearning(1000);
 // $schedule->hillClimbing(1000);
 
 $schedules = $schedule->cells;
