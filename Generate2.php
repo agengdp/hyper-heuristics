@@ -287,7 +287,7 @@ class Generate{
         }
 		$jadwalRule = array_column($rules, 'schedule');
 		$filterJadwalNull = array_filter($jadwalRule);
-		
+
 		$totShift=array("P"=>0,"S"=>0,"M"=>0,"L"=>0);		
 		if(!empty($filterJadwalNull)){
             $hitungJadwalYgSama = array_count_values($filterJadwalNull);
@@ -341,7 +341,7 @@ class Generate{
             });
             $maxLibur = count($seniors)-3;
             $totShiftSenior = $this->getTotalShift($cells, $column, $rule);
-            if($totShiftSenior['L']==$maxLibur){unset($availShift[3]);};
+            if($totShiftSenior['L']>=$maxLibur){unset($availShift[3]);};
             if($totShiftSenior['P']>0){unset($availShift[0]);};
             if($totShiftSenior['S']>0){unset($availShift[1]);};
             if($totShiftSenior['M']>0){unset($availShift[2]);};
@@ -351,7 +351,7 @@ class Generate{
             });
             $maxLibur = count($alls)-($this->constrainUnit['P']+$this->constrainUnit['S']+$this->constrainUnit['M']);
             $totShiftSenior = $this->getTotalShift($cells, $column, "All");
-            if($totShiftSenior['L']==$maxLibur){unset($availShift[3]);};
+            if($totShiftSenior['L']>=$maxLibur){unset($availShift[3]);};
             if($totShiftSenior['P']>=$this->constrainUnit['P']){unset($availShift[0]);};
             if($totShiftSenior['S']>=$this->constrainUnit['S']){unset($availShift[1]);};
             if($totShiftSenior['M']>=$this->constrainUnit['M']){unset($availShift[2]);};
@@ -366,6 +366,7 @@ class Generate{
         }elseif ($lbr ==2){
             $availShift=["X"];
         }
+
         return $availShift;
 	}
     /**
@@ -375,7 +376,6 @@ class Generate{
      */
     private function mapByEmployee(){
         $cells      = [];
-        $schedule   = [];
 
         foreach($this->cells as $y => $columns){
             foreach($columns as $x => $row){
@@ -390,7 +390,23 @@ class Generate{
 
         $this->cells['data'] = $cells;
     }
+    private function mapByDate($cells){
+        $res = [];
+        foreach($cells as $row => $employee){
+            foreach($employee['schedules'] as $column => $schedule){
+                $res[$column][$row] = [
+                    'schedule'  => $schedule['schedule'],
+                    'employee'  => [
+                        'nama' => $employee['nama'],
+                        'jabatan' => $employee['jabatan'],
+                        'spesialisasi' => $employee['spesialisasi']
+                    ]
+                ];
+            }
+        }
 
+        return $res;
+    }
     /**
      * Hitung JFI
      *
@@ -465,6 +481,24 @@ class Generate{
         return $arrWeek;
     }
 
+    private function lowLevelCheck($cells, $employeeIndex, $dateIndex){
+
+        $mapCells = $this->mapByDate($cells);
+        $check = $this->availShiftFromConstrain($mapCells, $dateIndex, $employeeIndex, [3 => 'L']);
+        if(in_array('L', $check)){
+
+            var_dump($check);
+            echo '<br/>';
+            var_dump($employeeIndex);
+            echo '<br/>';
+            var_dump($dateIndex);
+            echo '<hr/>';
+            return true;
+        }
+        return false;
+
+    }
+
     /**
      * Move
      *
@@ -484,24 +518,47 @@ class Generate{
         $minggu = array_filter($this->cells['data'][0]['schedules'], function($arr){
             return $arr['schedule'] == 'L';
         });
+
         $posisiMinggu = array_keys($minggu);
-        
+
         $dateIndex = array_rand($findLposition);
-        $dateMinggu = array_rand($minggu);
+        $dateMinggu = $posisiMinggu[array_rand($posisiMinggu)];
 
         $afterValue = '';
         if(isset($this->cells['data'][$employeeIndex]['schedules'][$dateMinggu])){
             $afterValue = $this->cells['data'][$employeeIndex]['schedules'][$dateMinggu]['schedule'];
         }
 
+        $cells = $this->cells['data'];
         if(!empty($afterValue)){
-            $this->cells['data'][$employeeIndex]['schedules'][$dateIndex]['schedule'] = $afterValue;
-            $this->cells['data'][$employeeIndex]['schedules'][$dateMinggu]['schedule'] = 'L';
+            $cells[$employeeIndex]['schedules'][$dateIndex]['schedule'] = $afterValue;
+            $cells[$employeeIndex]['schedules'][$dateMinggu]['schedule'] = 'L';
         }else{
-            $shift = ['P', 'S', 'M'];
-            $this->cells['data'][$employeeIndex]['schedules'][$dateIndex]['schedule'] = $this->cells['data'][$employeeIndex]['schedules'][0]['schedule'];
-            $this->cells['data'][$employeeIndex]['schedules'][0]['schedule'] = 'L';
+            $cells[$employeeIndex]['schedules'][$dateIndex]['schedule'] = $cells[$employeeIndex]['schedules'][0]['schedule'];
+            $cells[$employeeIndex]['schedules'][0]['schedule'] = 'L';
         }
+        $check = $this->lowLevelCheck($cells, $employeeIndex, $dateMinggu);
+        if($check){
+            if(!empty($afterValue)){
+                $this->cells['data'][$employeeIndex]['schedules'][$dateIndex]['schedule'] = $afterValue;
+                $this->cells['data'][$employeeIndex]['schedules'][$dateMinggu]['schedule'] = 'L';
+            }else{
+                $this->cells['data'][$employeeIndex]['schedules'][$dateIndex]['schedule'] = $this->cells['data'][$employeeIndex]['schedules'][0]['schedule'];
+                $this->cells['data'][$employeeIndex]['schedules'][0]['schedule'] = 'L';
+            }
+        }else{
+            $check2 = $this->lowLevelCheck($cells, $employeeIndex, $dateMinggu - 1);
+            if($check2){
+                if(!empty($afterValue)){
+                    $this->cells['data'][$employeeIndex]['schedules'][$dateIndex]['schedule'] = $afterValue;
+                    $this->cells['data'][$employeeIndex]['schedules'][$dateMinggu - 1]['schedule'] = 'L';
+                }else{
+                    $this->cells['data'][$employeeIndex]['schedules'][$dateIndex]['schedule'] = $this->cells['data'][$employeeIndex]['schedules'][0]['schedule'];
+                    $this->cells['data'][$employeeIndex]['schedules'][0]['schedule'] = 'L';
+                }
+            }
+        }
+
     }
 
     /**
@@ -577,12 +634,12 @@ class Generate{
 
             $currentCells = $this->cells;
 
-            echo $scores['move'] . ' || '. $scores['swap'] . ' <br/>' ;
+//            echo $scores['move'] . ' || '. $scores['swap'] . ' <br/>' ;
 
             // Jika nilai move & swap sama maka random
             if($scores['move'] == $scores['swap']){
                 $method = array_rand($lowLevels);
-                $call = $this->{$lowLevels[$method]}();
+                $this->{$lowLevels[$method]}();
                 $currentJFI = $this->countJFI();
 
                 if($currentJFI > $bestJFI){
@@ -626,7 +683,7 @@ class Generate{
                 }
             }
 
-            echo $currentJFI . ' || ' . $bestJFI . ' || ' . $method .'<br/>';
+//            echo $currentJFI . ' || ' . $bestJFI . ' || ' . $method .'<br/>';
 
             if($currentJFI > $bestJFI){
                 $bestJFI = $currentJFI;
