@@ -484,20 +484,41 @@ class Generate{
     private function lowLevelCheck($cells, $employeeIndex, $dateIndex){
 
         $mapCells = $this->mapByDate($cells);
-        $check = $this->availShiftFromConstrain($mapCells, $dateIndex, $employeeIndex, [3 => 'L']);
-        if(in_array('L', $check)){
 
-            var_dump($check);
-            echo '<br/>';
-            var_dump($employeeIndex);
-            echo '<br/>';
-            var_dump($dateIndex);
-            echo '<hr/>';
-            return true;
+        if($mapCells[$dateIndex][$employeeIndex]['employee']['jabatan'] === 'senior'){
+            $seniors = array_filter($mapCells[$dateIndex], function($arr){
+                return $arr['employee']['jabatan'] == "senior";
+            });
+
+            $liburSenior = array_filter($seniors, function($arr){
+               $arr['schedule'] === 'L';
+            });
+            $maxLibur = count($seniors)-3;
+            if(count($liburSenior) + 1 > $maxLibur){
+                return false;
+            }
         }
-        return false;
+
+
+        if($mapCells[$dateIndex][$employeeIndex]['employee']['jabatan'] !== 'karu'){
+            $libur = array_filter($mapCells[$dateIndex], function($arr){
+               return $arr['schedule'] === 'L';
+            });
+
+            $alls = array_filter($mapCells[$dateIndex], function($arr){
+                return $arr['employee']['jabatan'] !== "karu";
+            });
+            $maxLibur = count($alls)-($this->constrainUnit['P']+$this->constrainUnit['S']+$this->constrainUnit['M']);
+
+            if(count($libur) + 1 > $maxLibur){
+                return false;
+            }
+        }
+
+        return true;
 
     }
+
 
     /**
      * Move
